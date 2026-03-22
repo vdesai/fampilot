@@ -205,52 +205,89 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
                 }
             )
 
-        # Step 1 & 2: Extract event details
-        # Use vision-based extraction if Tesseract not available (production)
-        # Otherwise use OCR + text extraction (local development)
-        if not TESSERACT_AVAILABLE:
-            # Production path: Direct vision-based extraction
-            event_details = extract_event_from_image_vision(str(file_path), api_key)
-        else:
-            # Local development path: OCR then text extraction
-            text = extract_text_from_image(str(file_path))
+        # Extract event details using appropriate method
+        event_data = None
+        extracted_text = None
+        used_vision_fallback = False
 
-            if not text:
-                return templates.TemplateResponse(
-                    request,
-                    "result.html",
-                    {
-                        "request": request,
-                        "error": "No text could be extracted from the image. Please try a different image."
-                    }
-                )
+        try:
+            if not TESSERACT_AVAILABLE:
+                # Production path: Direct vision-based extraction
+                used_vision_fallback = True
+                event_data = extract_event_from_image_vision(str(file_path), api_key)
+            else:
+                # Local development path: OCR then text extraction
+                extracted_text = extract_text_from_image(str(file_path))
 
-            event_details = extract_event_details(text, api_key)
+                if not extracted_text:
+                    # Try vision fallback if OCR returns nothing
+                    used_vision_fallback = True
+                    event_data = extract_event_from_image_vision(str(file_path), api_key)
+                else:
+                    # Process extracted text
+                    event_data = extract_event_details(extracted_text, api_key)
+
+        except Exception as extraction_error:
+            # Clean up uploaded file
+            if file_path.exists():
+                file_path.unlink()
+
+            return templates.TemplateResponse(
+                request,
+                "result.html",
+                {
+                    "request": request,
+                    "error": f"Failed to extract event details: {str(extraction_error)}"
+                }
+            )
+
+        # Validate event data
+        if not event_data:
+            if file_path.exists():
+                file_path.unlink()
+
+            return templates.TemplateResponse(
+                request,
+                "result.html",
+                {
+                    "request": request,
+                    "error": "Could not extract event details from the image. Please try a different image."
+                }
+            )
 
         # Store event details with a simple ID
         event_id = str(hash(file.filename))
-        events_store[event_id] = event_details
+        events_store[event_id] = event_data
 
         # Generate Google Calendar URL (fallback method)
-        calendar_url = generate_google_calendar_url(event_details)
+        calendar_url = generate_google_calendar_url(event_data)
 
         # Clean up uploaded file
         file_path.unlink()
 
+        # Build context for template
+        context = {
+            "request": request,
+            "event": event_data,
+            "event_id": event_id,
+            "calendar_url": calendar_url
+        }
+
+        # Only add extracted_text_length if we have text
+        if extracted_text:
+            context["extracted_text_length"] = len(extracted_text)
+
         # Render result page with event details
-        return templates.TemplateResponse(
-            request,
-            "result.html",
-            {
-                "request": request,
-                "event": event_details,
-                "event_id": event_id,
-                "extracted_text_length": len(text),
-                "calendar_url": calendar_url
-            }
-        )
+        return templates.TemplateResponse(request, "result.html", context)
 
     except Exception as e:
+        # Clean up file if it exists
+        try:
+            if file_path.exists():
+                file_path.unlink()
+        except:
+            pass
+
         return templates.TemplateResponse(
             request,
             "result.html",
