@@ -173,7 +173,7 @@ def generate_google_calendar_url(event: Dict[str, Optional[str]]) -> str:
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Render the home page with upload form."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html")
 
 
 @app.post("/upload")
@@ -196,9 +196,9 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
 
         if not text:
             return templates.TemplateResponse(
-                "result.html",
-                {
-                    "request": request,
+                request=request,
+                name="result.html",
+                context={
                     "error": "No text could be extracted from the image. Please try a different image."
                 }
             )
@@ -207,9 +207,9 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             return templates.TemplateResponse(
-                "result.html",
-                {
-                    "request": request,
+                request=request,
+                name="result.html",
+                context={
                     "error": "ANTHROPIC_API_KEY not set. Please configure the API key."
                 }
             )
@@ -228,9 +228,9 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
 
         # Render result page with event details
         return templates.TemplateResponse(
-            "result.html",
-            {
-                "request": request,
+            request=request,
+            name="result.html",
+            context={
                 "event": event_details,
                 "event_id": event_id,
                 "extracted_text_length": len(text),
@@ -240,9 +240,9 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
 
     except Exception as e:
         return templates.TemplateResponse(
-            "result.html",
-            {
-                "request": request,
+            request=request,
+            name="result.html",
+            context={
                 "error": f"Error processing image: {str(e)}"
             }
         )
@@ -275,9 +275,9 @@ async def edit_event(
     calendar_url = generate_google_calendar_url(event_details)
 
     return templates.TemplateResponse(
-        "result.html",
-        {
-            "request": request,
+        request=request,
+        name="result.html",
+        context={
             "event": event_details,
             "event_id": event_id,
             "message": "Event updated successfully!",
@@ -295,9 +295,9 @@ async def confirm_event(request: Request, event_id: str):
 
     if not event:
         return templates.TemplateResponse(
-            "result.html",
-            {
-                "request": request,
+            request=request,
+            name="result.html",
+            context={
                 "error": "Event not found. Please upload the image again."
             }
         )
@@ -316,9 +316,9 @@ async def confirm_event(request: Request, event_id: str):
                 calendar_link = "Event added to Google Calendar successfully!"
 
     return templates.TemplateResponse(
-        "confirmed.html",
-        {
-            "request": request,
+        request=request,
+        name="confirmed.html",
+        context={
             "event": event,
             "calendar_added": calendar_service is not None,
             "calendar_link": calendar_link
