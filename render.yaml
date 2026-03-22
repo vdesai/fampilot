@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: fampilot
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "uvicorn app:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: ANTHROPIC_API_KEY
+        sync: false
