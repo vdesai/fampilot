@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Confirmed - FamPilot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .success-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+            animation: scaleIn 0.5s ease-out;
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .success-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            padding: 40px 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .success-icon {
+            font-size: 72px;
+            margin-bottom: 15px;
+            animation: bounce 0.6s ease-out;
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        .success-header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .success-header p {
+            font-size: 16px;
+            opacity: 0.95;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        /* Calendar Status */
+        .calendar-status {
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            animation: slideIn 0.5s ease-out 0.2s both;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .calendar-status.success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border-left: 4px solid #28a745;
+        }
+
+        .calendar-status.warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+            border-left: 4px solid #ffc107;
+        }
+
+        .status-icon {
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .status-content {
+            flex: 1;
+        }
+
+        .status-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .calendar-status.success .status-title {
+            color: #155724;
+        }
+
+        .calendar-status.warning .status-title {
+            color: #856404;
+        }
+
+        .status-text {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #666;
+        }
+
+        .calendar-status.success .status-text {
+            color: #155724;
+        }
+
+        .calendar-status.warning .status-text {
+            color: #856404;
+        }
+
+        /* Event Summary */
+        .event-summary {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .summary-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #667eea;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .summary-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #e8ebff;
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .summary-item:first-child {
+            padding-top: 0;
+        }
+
+        .item-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            width: 24px;
+            text-align: center;
+        }
+
+        .item-content {
+            flex: 1;
+        }
+
+        .item-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #667eea;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .item-value {
+            font-size: 16px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        /* Action Buttons */
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .button {
+            padding: 16px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #f8f9ff;
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .success-header {
+                padding: 30px 20px;
+            }
+
+            .success-icon {
+                font-size: 56px;
+            }
+
+            .success-header h1 {
+                font-size: 26px;
+            }
+
+            .card-body {
+                padding: 20px;
+            }
+
+            .actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-card">
+            <!-- Success Header -->
+            <div class="success-header">
+                <div class="success-icon">✅</div>
+                <h1>Event Confirmed!</h1>
+                <p>Your event has been successfully processed</p>
+            </div>
+
+            <!-- Card Body -->
+            <div class="card-body">
+                <!-- Calendar Status -->
+                {% if calendar_added %}
+                    <div class="calendar-status success">
+                        <div class="status-icon">📅</div>
+                        <div class="status-content">
+                            <div class="status-title">Added to Google Calendar</div>
+                            <div class="status-text">
+                                {% if calendar_link %}
+                                    {{ calendar_link }}
+                                {% else %}
+                                    Check your Google Calendar to see the event.
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="calendar-status warning">
+                        <div class="status-icon">⚠️</div>
+                        <div class="status-content">
+                            <div class="status-title">Not Added to Calendar</div>
+                            <div class="status-text">
+                                Google Calendar is not configured. Your event details are saved below.
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Event Summary -->
+                <div class="event-summary">
+                    <div class="summary-title">
+                        <span>📋</span>
+                        <span>Event Details</span>
+                    </div>
+
+                    <div class="summary-item">
+                        <div class="item-icon">📌</div>
+                        <div class="item-content">
+                            <div class="item-label">Title</div>
+                            <div class="item-value">{{ event.title }}</div>
+                        </div>
+                    </div>
+
+                    <div class="summary-item">
+                        <div class="item-icon">📅</div>
+                        <div class="item-content">
+                            <div class="item-label">
+                                {% if event.end_date %}Dates{% else %}Date{% endif %}
+                            </div>
+                            <div class="item-value">
+                                {% if event.end_date %}
+                                    {{ event.start_date }} → {{ event.end_date }}
+                                {% else %}
+                                    {{ event.start_date }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if event.time %}
+                    <div class="summary-item">
+                        <div class="item-icon">🕐</div>
+                        <div class="item-content">
+                            <div class="item-label">Time</div>
+                            <div class="item-value">{{ event.time }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if event.location %}
+                    <div class="summary-item">
+                        <div class="item-icon">📍</div>
+                        <div class="item-content">
+                            <div class="item-label">Location</div>
+                            <div class="item-value">{{ event.location }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="actions">
+                    <a href="/" class="button btn-primary">
+                        <span>📸</span>
+                        <span>Upload Another</span>
+                    </a>
+                    {% if calendar_added %}
+                        <a href="https://calendar.google.com" target="_blank" class="button btn-secondary">
+                            <span>📅</span>
+                            <span>Open Calendar</span>
+                        </a>
+                    {% else %}
+                        <a href="/" class="button btn-secondary">
+                            <span>🏠</span>
+                            <span>Back Home</span>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>✨ Event successfully processed by FamPilot</p>
+        </div>
+    </div>
+</body>
+</html>
