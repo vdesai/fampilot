@@ -21,9 +21,11 @@ from fastapi.templating import Jinja2Templates
 from main import (
     extract_text_from_image,
     extract_event_details,
+    extract_event_from_image_vision,
     authenticate_google_calendar,
     create_calendar_event,
-    GOOGLE_CALENDAR_AVAILABLE
+    GOOGLE_CALENDAR_AVAILABLE,
+    TESSERACT_AVAILABLE
 )
 
 # Initialize FastAPI app
@@ -191,20 +193,7 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
             content = await file.read()
             f.write(content)
 
-        # Step 1: Extract text from image
-        text = extract_text_from_image(str(file_path))
-
-        if not text:
-            return templates.TemplateResponse(
-                request,
-                "result.html",
-                {
-                    "request": request,
-                    "error": "No text could be extracted from the image. Please try a different image."
-                }
-            )
-
-        # Step 2: Extract event details using AI
+        # Get API key first
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             return templates.TemplateResponse(
@@ -216,7 +205,27 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
                 }
             )
 
-        event_details = extract_event_details(text, api_key)
+        # Step 1 & 2: Extract event details
+        # Use vision-based extraction if Tesseract not available (production)
+        # Otherwise use OCR + text extraction (local development)
+        if not TESSERACT_AVAILABLE:
+            # Production path: Direct vision-based extraction
+            event_details = extract_event_from_image_vision(str(file_path), api_key)
+        else:
+            # Local development path: OCR then text extraction
+            text = extract_text_from_image(str(file_path))
+
+            if not text:
+                return templates.TemplateResponse(
+                    request,
+                    "result.html",
+                    {
+                        "request": request,
+                        "error": "No text could be extracted from the image. Please try a different image."
+                    }
+                )
+
+            event_details = extract_event_details(text, api_key)
 
         # Store event details with a simple ID
         event_id = str(hash(file.filename))

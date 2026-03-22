@@ -4,12 +4,13 @@ An AI-powered assistant that extracts event information from images and adds the
 
 ## Features
 
-- 📸 **OCR Text Extraction** - Uses Tesseract to read text from images
+- 📸 **Smart OCR** - Uses Tesseract (local) or Claude Vision (production)
 - 🧠 **Smart Event Detection** - Claude AI identifies event details automatically
 - 📅 **Multi-Day Support** - Handles date ranges like "July 20-22, 2024"
 - ✏️ **Easy Editing** - Modify any field before confirming
 - 📅 **Google Calendar Integration** - Automatically adds confirmed events to your calendar
 - 🎯 **Clean Workflow** - Minimal, focused terminal output
+- 🚀 **Easy Deployment** - No system dependencies required for production
 
 ## Quick Start
 
@@ -29,12 +30,14 @@ python3 app.py
 # Navigate to http://localhost:8000
 ```
 
+**Note:** Works with or without Tesseract! See [OCR Modes](#ocr-modes) below.
+
 See **[WEB_README.md](WEB_README.md)** for detailed web interface documentation.
 
 ### Option 2: Command Line
 
 ```bash
-# 1. Install Tesseract OCR
+# 1. (Optional) Install Tesseract OCR for faster processing
 brew install tesseract  # macOS
 # sudo apt-get install tesseract-ocr  # Linux
 
@@ -47,6 +50,8 @@ export ANTHROPIC_API_KEY='your-api-key-here'
 # 4. Run
 python3 main.py event_image.png
 ```
+
+**Note:** Tesseract is optional. Without it, the app uses Claude Vision API (slower but works everywhere).
 
 ## Workflow
 
@@ -256,17 +261,46 @@ python3 main.py <image_path>
 export ANTHROPIC_API_KEY='your-key'
 ```
 
+## OCR Modes
+
+FamPilot adapts to your environment:
+
+### Local Development (with Tesseract)
+```
+Image → Tesseract OCR → Claude Text Analysis → Event Details
+```
+- **Fast**: ~2 seconds
+- **Cheap**: ~$0.003 per image
+- **Setup**: `brew install tesseract`
+
+### Production/Cloud (without Tesseract)
+```
+Image → Claude Vision API → Event Details
+```
+- **Simple**: No installation needed
+- **Works anywhere**: Render, Heroku, etc.
+- **Cost**: ~$0.048 per image
+
+**The app automatically detects which mode to use!**
+
+See **[OCR_MODES.md](OCR_MODES.md)** for detailed comparison.
+
 ## Troubleshooting
 
 ### "No text extracted from image"
-- Ensure image has readable text
-- Check that tesseract is installed: `tesseract --version`
-- Try a higher quality image
+- Image quality too low
+- Try a clearer image
+- Note: Vision mode handles poor quality better than OCR
 
 ### "ANTHROPIC_API_KEY not set"
 ```bash
 export ANTHROPIC_API_KEY='your-api-key'
 ```
+
+### Slow Processing
+- Vision API: ~4 seconds (normal)
+- OCR mode: ~2 seconds
+- Install Tesseract locally for faster processing
 
 ### "credentials.json not found"
 - Google Calendar integration is optional

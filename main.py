@@ -40,6 +40,14 @@ else:
 # Google Calendar API scopes
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
+# Check if Tesseract is available
+TESSERACT_AVAILABLE = False
+try:
+    pytesseract.get_tesseract_version()
+    TESSERACT_AVAILABLE = True
+except:
+    TESSERACT_AVAILABLE = False
+
 
 # ============================================================================
 # OCR EXTRACTION
@@ -49,6 +57,9 @@ def extract_text_from_image(image_path: str) -> str:
     """
     Extract text from an image using Tesseract OCR.
 
+    Note: This function is only used if Tesseract is installed locally.
+    For production/deployment, use extract_event_from_image_vision instead.
+
     Args:
         image_path: Path to the image file
 
@@ -57,8 +68,11 @@ def extract_text_from_image(image_path: str) -> str:
 
     Raises:
         FileNotFoundError: If image file doesn't exist
-        Exception: If OCR extraction fails
+        Exception: If OCR extraction fails or Tesseract not available
     """
+    if not TESSERACT_AVAILABLE:
+        raise Exception("Tesseract not installed. Use vision-based extraction instead.")
+
     try:
         img = Image.open(image_path)
         text = pytesseract.image_to_string(img)
@@ -67,6 +81,107 @@ def extract_text_from_image(image_path: str) -> str:
         raise FileNotFoundError(f"Image file not found: {image_path}")
     except Exception as e:
         raise Exception(f"Error extracting text from image: {str(e)}")
+
+
+def extract_event_from_image_vision(image_path: str, api_key: str) -> Dict[str, Optional[str]]:
+    """
+    Extract event details directly from image using Claude Vision API.
+    This method works without Tesseract OCR installation.
+
+    Args:
+        image_path: Path to the image file
+        api_key: Anthropic API key
+
+    Returns:
+        Dictionary with extracted event information including:
+        - title: Event name
+        - start_date: Start date (YYYY-MM-DD)
+        - end_date: End date for multi-day events (YYYY-MM-DD) or null
+        - time: Original time string
+        - location: Venue or null
+    """
+    import base64
+    from pathlib import Path
+
+    # Read and encode image
+    image_file = Path(image_path)
+    if not image_file.exists():
+        raise FileNotFoundError(f"Image file not found: {image_path}")
+
+    with open(image_file, "rb") as f:
+        image_data = base64.standard_b64encode(f.read()).decode("utf-8")
+
+    # Determine media type
+    suffix = image_file.suffix.lower()
+    media_types = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp'
+    }
+    media_type = media_types.get(suffix, 'image/jpeg')
+
+    client = Anthropic(api_key=api_key)
+
+    prompt = """Analyze this event flyer or invitation image and extract the event details.
+
+Extract the following information and return ONLY raw JSON (no markdown, no code blocks, no explanations):
+
+Required fields:
+- title: The event title/name
+- start_date: The event start date (in ISO format YYYY-MM-DD)
+- end_date: The event end date if it's a multi-day event (YYYY-MM-DD), or null for single-day events
+- time: The event time as written (keep original format like "10AM-4PM" or "6:00 PM - 11:00 PM")
+- location: The event location/venue
+
+If any field cannot be determined from the image, use null.
+
+For date ranges like "July 20-22" or "Jul 20-22, 2024":
+- start_date: "2024-07-20"
+- end_date: "2024-07-22"
+
+For single dates like "July 20" or "July 20, 2024":
+- start_date: "2024-07-20"
+- end_date: null
+
+CRITICAL: Return ONLY the raw JSON object. No markdown, no code blocks, no explanations."""
+
+    try:
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": media_type,
+                                "data": image_data,
+                            },
+                        },
+                        {
+                            "type": "text",
+                            "text": prompt
+                        }
+                    ],
+                }
+            ],
+        )
+
+        response_text = message.content[0].text
+        cleaned_response = clean_json_response(response_text)
+        event_info = json.loads(cleaned_response)
+
+        return event_info
+
+    except json.JSONDecodeError as e:
+        raise Exception(f"Failed to parse Claude API response as JSON: {str(e)}")
+    except Exception as e:
+        raise Exception(f"Error calling Claude Vision API: {str(e)}")
 
 
 # ============================================================================

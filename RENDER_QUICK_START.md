@@ -36,7 +36,7 @@ git push -u origin main
    ```
    Name:           fampilot
    Environment:    Python 3
-   Build Command:  ./build.sh
+   Build Command:  pip install -r requirements.txt
    Start Command:  uvicorn app:app --host 0.0.0.0 --port $PORT
    ```
 
@@ -80,16 +80,21 @@ Your app is live at: `https://your-app-name.onrender.com`
 
 ---
 
-## Build Command Explained
+## How It Works
 
-The `./build.sh` script:
+**No Tesseract needed!** The app automatically uses Claude Vision API when Tesseract isn't available.
 
-1. ✅ Updates package list
-2. ✅ Installs Tesseract OCR
-3. ✅ Verifies installation
-4. ✅ Installs Python dependencies
+### Production Mode (Render)
+```
+Image → Claude Vision API → Event Details
+```
 
-**No code changes needed** - works automatically!
+### Local Mode (with Tesseract)
+```
+Image → Tesseract OCR → Claude Text → Event Details
+```
+
+**The app detects the environment automatically!**
 
 ---
 
@@ -97,23 +102,16 @@ The `./build.sh` script:
 
 ### Build Fails
 
-**Check:** `build.sh` is executable
-```bash
-chmod +x build.sh
-git add build.sh
-git commit -m "Make executable"
-git push
+**Check:** Build command is correct:
+```
+pip install -r requirements.txt
 ```
 
-### Tesseract Error
+### Slow Image Processing
 
-**Check:** Build logs show:
-```
-Installing Tesseract OCR...
-tesseract 4.1.1
-```
+**Normal:** Vision API takes ~4 seconds vs ~2 seconds with Tesseract
 
-If missing, verify build command is `./build.sh`
+This is expected in production mode.
 
 ### API Key Missing
 
