@@ -9,7 +9,7 @@ import json
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
 from urllib.parse import quote
 
 from fastapi import FastAPI, UploadFile, File, Form, Request
@@ -36,7 +36,7 @@ templates = Jinja2Templates(directory="templates")
 events_store = {}
 
 
-def parse_time_simple(time_str: str, date_str: str) -> tuple[Optional[datetime], Optional[datetime]]:
+def parse_time_simple(time_str: str, date_str: str) -> Tuple[Optional[datetime], Optional[datetime]]:
     """
     Simple time parser for Google Calendar URL generation.
 
