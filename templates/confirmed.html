@@ -114,6 +114,11 @@
             border-left: 4px solid #ffc107;
         }
 
+        .calendar-status.action {
+            background: linear-gradient(135deg, #e8ebff 0%, #f0f2ff 100%);
+            border-left: 4px solid #667eea;
+        }
+
         .status-icon {
             font-size: 28px;
             flex-shrink: 0;
@@ -150,6 +155,14 @@
 
         .calendar-status.warning .status-text {
             color: #856404;
+        }
+
+        .calendar-status.action .status-title {
+            color: #667eea;
+        }
+
+        .calendar-status.action .status-text {
+            color: #667eea;
         }
 
         /* Event Summary */
@@ -323,12 +336,12 @@
                         </div>
                     </div>
                 {% else %}
-                    <div class="calendar-status warning">
-                        <div class="status-icon">⚠️</div>
+                    <div class="calendar-status action">
+                        <div class="status-icon">⚡</div>
                         <div class="status-content">
-                            <div class="status-title">Not Added to Calendar</div>
+                            <div class="status-title">Instantly add to your calendar</div>
                             <div class="status-text">
-                                Google Calendar is not configured. Your event details are saved below.
+                                One click to add this event to Google Calendar.
                             </div>
                         </div>
                     </div>

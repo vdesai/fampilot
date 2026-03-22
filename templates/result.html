@@ -333,14 +333,18 @@
         }
 
         .btn-calendar-quick {
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            padding: 18px 32px;
+            font-size: 17px;
+            font-weight: 600;
         }
 
         .btn-calendar-quick:hover {
-            background: #f8f9ff;
             transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
 
         button:active {
@@ -349,27 +353,27 @@
 
         /* Quick Add Section */
         .quick-add-section {
-            margin-top: 20px;
-            padding-top: 20px;
+            margin-top: 30px;
+            padding-top: 30px;
             border-top: 2px solid #f0f0f0;
+            text-align: center;
         }
 
         .quick-add-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: #667eea;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
             text-align: center;
         }
 
         .quick-add-description {
-            font-size: 13px;
-            color: #666;
+            font-size: 14px;
+            color: #999;
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             line-height: 1.5;
+            font-weight: 500;
         }
 
         /* Info Footer */
@@ -598,9 +602,9 @@
                     <!-- Quick Add to Calendar (No Auth Required) -->
                     {% if calendar_url %}
                     <div class="quick-add-section">
-                        <div class="quick-add-title">⚡ Instantly add to Google Calendar</div>
+                        <div class="quick-add-title">⚡ Add to your calendar instantly</div>
                         <div class="quick-add-description">
-                            Or add to Google Calendar directly without authentication
+                            No login required. One click to add.
                         </div>
                         <a href="{{ calendar_url }}" target="_blank" class="button btn-calendar-quick">
                             <span>📅</span>
