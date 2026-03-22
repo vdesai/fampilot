@@ -165,6 +165,35 @@
             color: #667eea;
         }
 
+        /* Calendar Button */
+        .btn-calendar-add {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            padding: 18px 32px;
+            font-size: 17px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+            margin-top: 15px;
+        }
+
+        .btn-calendar-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-calendar-add:active {
+            transform: translateY(0);
+        }
+
         /* Event Summary */
         .event-summary {
             background: #f8f9ff;
@@ -341,8 +370,14 @@
                         <div class="status-content">
                             <div class="status-title">Instantly add to your calendar</div>
                             <div class="status-text">
-                                One click to add this event to Google Calendar.
+                                No login required. One click to add.
                             </div>
+                            {% if calendar_url %}
+                            <a href="{{ calendar_url }}" target="_blank" class="btn-calendar-add">
+                                <span>📅</span>
+                                <span>Add to Google Calendar</span>
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                 {% endif %}

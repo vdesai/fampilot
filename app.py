@@ -367,6 +367,9 @@ async def confirm_event(request: Request, event_id: str):
                 # without modifying it, so we'll just show success
                 calendar_link = "Event added to Google Calendar successfully!"
 
+    # Generate Google Calendar URL (no-auth method)
+    calendar_url = generate_google_calendar_url(event)
+
     return templates.TemplateResponse(
         request,
         "confirmed.html",
@@ -374,7 +377,8 @@ async def confirm_event(request: Request, event_id: str):
             "request": request,
             "event": event,
             "calendar_added": calendar_service is not None,
-            "calendar_link": calendar_link
+            "calendar_link": calendar_link,
+            "calendar_url": calendar_url
         }
     )
 
