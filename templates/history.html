@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History - FamPilot</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container { max-width: 720px; margin: 0 auto; }
+
+        /* Header */
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 28px; color: white; font-weight: 700; margin-bottom: 6px; }
+        .header p  { color: rgba(255,255,255,0.85); font-size: 15px; }
+
+        /* Nav */
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .nav a {
+            color: rgba(255,255,255,0.9);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .nav a:hover { background: rgba(255,255,255,0.15); }
+        .nav .count { color: rgba(255,255,255,0.7); font-size: 14px; }
+
+        /* Empty state */
+        .empty {
+            background: white;
+            border-radius: 16px;
+            padding: 60px 30px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+        }
+        .empty-icon  { font-size: 56px; margin-bottom: 16px; }
+        .empty-title { font-size: 20px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .empty-sub   { font-size: 14px; color: #888; margin-bottom: 24px; }
+        .empty a {
+            display: inline-block;
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        /* Item list */
+        .item-list { display: grid; gap: 12px; }
+
+        .item-card {
+            background: white;
+            border-radius: 14px;
+            padding: 18px 22px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            gap: 16px;
+            transition: transform 0.15s, box-shadow 0.15s;
+            text-decoration: none;
+            color: inherit;
+        }
+        .item-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        .item-left { min-width: 0; }
+
+        .item-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            white-space: nowrap;
+        }
+        .type-badge.event    { background: #e8f5e9; color: #2e7d32; }
+        .type-badge.task     { background: #fff3e0; color: #e65100; }
+        .type-badge.reminder { background: #e3f2fd; color: #1565c0; }
+
+        .item-confidence {
+            font-size: 12px;
+            color: #aaa;
+            font-weight: 500;
+        }
+        .item-date-label {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .item-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #222;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-sub {
+            font-size: 13px;
+            color: #888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-arrow {
+            font-size: 18px;
+            color: #ccc;
+            flex-shrink: 0;
+        }
+        .item-card:hover .item-arrow { color: #667eea; }
+
+        /* Created-at grouping label */
+        .date-group {
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin: 20px 0 8px 4px;
+        }
+        .date-group:first-child { margin-top: 0; }
+
+        @media (max-width: 600px) {
+            .item-card { padding: 14px 16px; gap: 10px; }
+            .item-title { font-size: 15px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>📜 History</h1>
+        <p>Everything FamPilot has analyzed</p>
+    </div>
+
+    <div class="nav">
+        <a href="/">← New Analysis</a>
+        {% if items %}
+        <span class="count">{{ items | length }} item{{ 's' if items | length != 1 else '' }}</span>
+        {% endif %}
+    </div>
+
+    {% if not items %}
+    <div class="empty">
+        <div class="empty-icon">📭</div>
+        <div class="empty-title">No history yet</div>
+        <div class="empty-sub">Analyzed items will appear here after you submit your first image or text.</div>
+        <a href="/">Analyze something now →</a>
+    </div>
+
+    {% else %}
+    <div class="item-list">
+        {% set ns = namespace(last_day="") %}
+        {% for row in items %}
+            {% set day = row.created_at[:10] %}
+            {% if day != ns.last_day %}
+                {% set ns.last_day = day %}
+                <div class="date-group">{{ day }}</div>
+            {% endif %}
+
+            <a class="item-card" href="/history/{{ row.id }}">
+                <div class="item-left">
+                    <div class="item-meta">
+                        <span class="type-badge {{ row.type or 'event' }}">
+                            {% if row.type == 'event' %}📅 Event
+                            {% elif row.type == 'task' %}✅ Task
+                            {% else %}🔔 Reminder{% endif %}
+                        </span>
+                        <span class="item-confidence">
+                            {% if row.confidence %}{{ (row.confidence * 100) | int }}%{% endif %}
+                        </span>
+                        <span class="item-date-label">{{ row.created_at[11:16] }} UTC</span>
+                    </div>
+
+                    <div class="item-title">{{ row.title or "Untitled" }}</div>
+
+                    <div class="item-sub">
+                        {% if row.type == 'event' %}
+                            {% if row.start_date %}{{ row.start_date }}{% endif %}
+                            {% if row.time %} · {{ row.time }}{% endif %}
+                            {% if row.location %} · {{ row.location }}{% endif %}
+                        {% elif row.type == 'task' %}
+                            {% if row.start_date %}Due {{ row.start_date }}{% endif %}
+                            {% if row.priority %} · {{ row.priority | capitalize }} priority{% endif %}
+                            {% if row.notes %} · {{ row.notes[:60] }}{% endif %}
+                        {% else %}
+                            {% if row.remind_at %}{{ row.remind_at }}{% endif %}
+                            {% if row.notes %} · {{ row.notes[:60] }}{% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="item-arrow">›</div>
+            </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>
+</body>
+</html>

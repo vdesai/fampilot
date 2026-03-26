@@ -324,6 +324,27 @@ The app works perfectly without Google Calendar:
 - Provides JSON output for manual entry
 - All other features function normally
 
+## Data Persistence (SQLite)
+
+FamPilot stores every analyzed item in a local SQLite database.
+
+| Environment | Behaviour |
+|---|---|
+| Local dev | `fampilot.db` created in the project directory |
+| Render free tier | DB lives in the ephemeral filesystem — **data is lost on each redeploy** |
+| Render with Persistent Disk | Mount a disk at e.g. `/data` and set `DB_PATH=/data/fampilot.db` |
+
+### Enabling persistence on Render
+
+1. In your Render service settings, add a **Persistent Disk** (Render paid feature) mounted at `/data`.
+2. Add the environment variable:
+   ```
+   DB_PATH=/data/fampilot.db
+   ```
+3. Redeploy — the database will now survive restarts and redeploys.
+
+> **Future option**: swap SQLite for PostgreSQL (e.g. Render's managed Postgres) by replacing `db.py` with a `psycopg2`/`asyncpg` implementation. The rest of the app is unchanged.
+
 ## File Structure
 
 ```

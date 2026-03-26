@@ -11,11 +11,14 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Dict, Tuple
 from urllib.parse import quote
+from uuid import uuid4
 
 from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
+import db
 
 # Import functions from main.py
 from main import (
@@ -215,7 +218,8 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
             if file_path and file_path.exists():
                 file_path.unlink()
 
-        return _render_result(request, result, file.filename)
+        item_id = str(uuid4())
+        return _render_result(request, result, item_id, image_path=file.filename)
 
     except Exception as e:
         if file_path and file_path.exists():
@@ -250,7 +254,8 @@ async def process_text(request: Request, text: str = Form(...)):
             "error": f"Failed to analyze text: {str(e)}"
         })
 
-    return _render_result(request, result, text[:30])
+    item_id = str(uuid4())
+    return _render_result(request, result, item_id, source_text=text)
 
 
 def _result_to_calendar_data(result: Dict) -> Optional[Dict]:
@@ -308,16 +313,20 @@ def _result_to_calendar_data(result: Dict) -> Optional[Dict]:
 CONFIDENCE_THRESHOLD = 0.80
 
 
-def _render_result(request: Request, result: Dict, source_name: str):
-    """Build template context from a classified result and render result.html."""
-    item_id = str(hash(source_name))
+def _render_result(request: Request, result: Dict, item_id: str,
+                   source_text: Optional[str] = None,
+                   image_path: Optional[str] = None,
+                   message: Optional[str] = None):
+    """Persist result, store in memory, build context, render result.html."""
     items_store[item_id] = result
+    db.save_item(item_id, result, source_text=source_text, image_path=image_path)
 
     context = {
         "request": request,
         "result": result,
         "item_id": item_id,
         "low_confidence": result.get("confidence", 1.0) < CONFIDENCE_THRESHOLD,
+        "message": message,
     }
 
     cal_data = _result_to_calendar_data(result)
@@ -344,6 +353,7 @@ async def reclassify(request: Request, item_id: str, forced_type: str = Form(...
         "reasoning": f"Manually set to '{forced_type}' by user.",
     }
     items_store[item_id] = updated
+    db.update_type(item_id, forced_type)
 
     context = {
         "request": request,
@@ -381,6 +391,7 @@ async def edit_event(
     }
     result = {**existing, "data": updated_data}
     items_store[item_id] = result
+    db.update_event_data(item_id, updated_data)
 
     calendar_url = generate_google_calendar_url(updated_data)
 
@@ -428,10 +439,44 @@ async def confirm_event(request: Request, item_id: str):
 
 @app.post("/cancel")
 async def cancel_event(request: Request):
-    """
-    Cancel event extraction and return to home.
-    """
     return RedirectResponse(url="/", status_code=303)
+
+
+@app.get("/history", response_class=HTMLResponse)
+async def history_page(request: Request):
+    """Show all analyzed items, newest first."""
+    rows = db.get_history(limit=100)
+    return templates.TemplateResponse(request, "history.html", {
+        "request": request,
+        "items": rows,
+    })
+
+
+@app.get("/history/{item_id}", response_class=HTMLResponse)
+async def history_detail(request: Request, item_id: str):
+    """Load a past item from DB and render it with the standard result view."""
+    row = db.get_item(item_id)
+    if not row:
+        return templates.TemplateResponse(request, "result.html", {
+            "request": request,
+            "error": "Item not found in history.",
+        })
+
+    result = db.row_to_result(row)
+    # Restore to in-memory store so edit/confirm/reclassify still work
+    items_store[item_id] = result
+
+    context = {
+        "request": request,
+        "result": result,
+        "item_id": item_id,
+        "low_confidence": False,
+    }
+    cal_data = _result_to_calendar_data(result)
+    if cal_data:
+        context["calendar_url"] = generate_google_calendar_url(cal_data)
+
+    return templates.TemplateResponse(request, "result.html", context)
 
 
 if __name__ == "__main__":
