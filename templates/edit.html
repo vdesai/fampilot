@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit - FamPilot</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 30px 20px 50px;
+        }
+
+        .header { text-align: center; margin-bottom: 24px; }
+        .header h1 { font-size: 26px; color: white; font-weight: 700; margin-bottom: 5px; }
+        .header p  { color: rgba(255,255,255,0.85); font-size: 14px; }
+
+        /* Type badge */
+        .type-badge-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+        .type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .type-badge.event    { background: #e8f5e9; color: #2e7d32; }
+        .type-badge.task     { background: #fff3e0; color: #e65100; }
+        .type-badge.reminder { background: #e3f2fd; color: #1565c0; }
+
+        /* Form card */
+        .form-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        .form-card-header {
+            padding: 20px 26px;
+            color: white;
+        }
+        .form-card-header.event    { background: linear-gradient(135deg,#43a047,#1b5e20); }
+        .form-card-header.task     { background: linear-gradient(135deg,#fb8c00,#bf360c); }
+        .form-card-header.reminder { background: linear-gradient(135deg,#1e88e5,#0d47a1); }
+        .form-card-header h2 { font-size: 18px; font-weight: 600; }
+
+        .form-body { padding: 26px; }
+
+        .form-group { margin-bottom: 18px; }
+        .form-group:last-child { margin-bottom: 0; }
+
+        label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        label.event-label    { color: #43a047; }
+        label.task-label     { color: #fb8c00; }
+        label.reminder-label { color: #1e88e5; }
+        label.common-label   { color: #667eea; }
+
+        input[type="text"],
+        input[type="date"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            color: #333;
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background: white;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+        /* Actions */
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-save   { background: linear-gradient(135deg,#28a745,#20c997); color: white; }
+        .btn-save:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(40,167,69,0.35); }
+        .btn-cancel { background: white; color: #666; border: 2px solid #ddd; flex: 0 0 auto; padding: 14px 22px; }
+        .btn-cancel:hover { border-color: #999; }
+
+        /* Delete section */
+        .delete-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .delete-label { color: rgba(255,255,255,0.85); font-size: 14px; }
+        .btn-delete {
+            padding: 10px 20px;
+            background: rgba(220,53,69,0.2);
+            color: #ff8a94;
+            border: 1.5px solid rgba(255,107,122,0.4);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-delete:hover { background: rgba(220,53,69,0.35); }
+
+        @media (max-width: 600px) {
+            .two-col { grid-template-columns: 1fr; }
+            .form-body { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+{% include "_nav.html" %}
+
+<div class="container">
+
+    <div class="header">
+        <h1>✏️ Edit Item</h1>
+        <p>Update the fields below and save.</p>
+    </div>
+
+    <div class="type-badge-row">
+        <span class="type-badge {{ row.type }}">
+            {% if row.type == 'event' %}📅 Event
+            {% elif row.type == 'task' %}✅ Task
+            {% else %}🔔 Reminder{% endif %}
+        </span>
+    </div>
+
+    <div class="form-card">
+        <div class="form-card-header {{ row.type }}">
+            <h2>{{ row.title or "Untitled" }}</h2>
+        </div>
+
+        <div class="form-body">
+            <form action="/history/{{ item_id }}/update" method="post">
+
+                <!-- ── COMMON: Title ── -->
+                <div class="form-group">
+                    <label class="common-label">📌 Title</label>
+                    <input type="text" name="title" value="{{ row.title or '' }}" required placeholder="Title">
+                </div>
+
+                {% if row.type == 'event' %}
+                <!-- ── EVENT fields ── -->
+                <div class="two-col">
+                    <div class="form-group">
+                        <label class="event-label">📅 Start Date</label>
+                        <input type="date" name="start_date" value="{{ row.start_date or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="event-label">📅 End Date</label>
+                        <input type="date" name="end_date" value="{{ row.end_date or '' }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="event-label">🕐 Time</label>
+                    <input type="text" name="time" value="{{ row.time or '' }}" placeholder="e.g. 7:00 PM">
+                </div>
+                <div class="form-group">
+                    <label class="event-label">📍 Location</label>
+                    <input type="text" name="location" value="{{ row.location or '' }}" placeholder="Venue or address">
+                </div>
+                <div class="form-group">
+                    <label class="event-label">📝 Notes</label>
+                    <textarea name="notes" placeholder="Optional notes">{{ row.notes or '' }}</textarea>
+                </div>
+
+                {% elif row.type == 'task' %}
+                <!-- ── TASK fields ── -->
+                <div class="two-col">
+                    <div class="form-group">
+                        <label class="task-label">📅 Due Date</label>
+                        <input type="date" name="start_date" value="{{ row.start_date or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="task-label">🎯 Priority</label>
+                        <select name="priority">
+                            <option value="high"   {% if row.priority == 'high' %}selected{% endif %}>High</option>
+                            <option value="medium" {% if row.priority == 'medium' or not row.priority %}selected{% endif %}>Medium</option>
+                            <option value="low"    {% if row.priority == 'low' %}selected{% endif %}>Low</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="task-label">📝 Notes</label>
+                    <textarea name="notes" placeholder="Optional notes">{{ row.notes or '' }}</textarea>
+                </div>
+
+                {% else %}
+                <!-- ── REMINDER fields ── -->
+                <div class="form-group">
+                    <label class="reminder-label">⏰ When</label>
+                    <input type="text" name="remind_at" value="{{ row.remind_at or '' }}"
+                           placeholder="e.g. every morning, 2026-04-01 8:00 AM">
+                </div>
+                <div class="form-group">
+                    <label class="reminder-label">📝 Notes</label>
+                    <textarea name="notes" placeholder="Optional notes">{{ row.notes or '' }}</textarea>
+                </div>
+                {% endif %}
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-save">💾 Save Changes</button>
+                    <a href="/history/{{ item_id }}" class="btn btn-cancel">Cancel</a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete section -->
+    <div class="delete-section">
+        <span class="delete-label">Permanently remove this item from history</span>
+        <form action="/history/{{ item_id }}/delete" method="post"
+              onsubmit="return confirm('Delete this item? This cannot be undone.');">
+            <button type="submit" class="btn-delete">🗑️ Delete</button>
+        </form>
+    </div>
+
+</div>
+</body>
+</html>

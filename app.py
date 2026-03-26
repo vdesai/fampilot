@@ -464,7 +464,6 @@ async def history_detail(request: Request, item_id: str):
         })
 
     result = db.row_to_result(row)
-    # Restore to in-memory store so edit/confirm/reclassify still work
     items_store[item_id] = result
 
     context = {
@@ -472,12 +471,71 @@ async def history_detail(request: Request, item_id: str):
         "result": result,
         "item_id": item_id,
         "low_confidence": False,
+        "from_history": True,       # shows Edit + Delete buttons
     }
     cal_data = _result_to_calendar_data(result)
     if cal_data:
         context["calendar_url"] = generate_google_calendar_url(cal_data)
 
     return templates.TemplateResponse(request, "result.html", context)
+
+
+@app.get("/history/{item_id}/edit", response_class=HTMLResponse)
+async def edit_item_form(request: Request, item_id: str):
+    """Show the edit form for a saved history item."""
+    row = db.get_item(item_id)
+    if not row:
+        return RedirectResponse(url="/history", status_code=303)
+    return templates.TemplateResponse(request, "edit.html", {
+        "request": request,
+        "row": row,
+        "item_id": item_id,
+        "nav_page": "history",
+    })
+
+
+@app.post("/history/{item_id}/update")
+async def update_item(
+    request: Request,
+    item_id: str,
+    title: str = Form(""),
+    start_date: str = Form(None),
+    end_date: str = Form(None),
+    time: str = Form(None),
+    location: str = Form(None),
+    notes: str = Form(None),
+    priority: str = Form(None),
+    remind_at: str = Form(None),
+):
+    """Persist edits to a saved item and redirect to its detail page."""
+    row = db.get_item(item_id)
+    if not row:
+        return RedirectResponse(url="/history", status_code=303)
+
+    fields = {
+        "title":      title or None,
+        "start_date": start_date or None,
+        "end_date":   end_date or None,
+        "time":       time or None,
+        "location":   location or None,
+        "notes":      notes or None,
+        "priority":   priority or None,
+        "remind_at":  remind_at or None,
+    }
+    db.update_item(item_id, row["type"], fields)
+    # Also update in-memory store if present
+    if item_id in items_store:
+        items_store.pop(item_id)
+
+    return RedirectResponse(url=f"/history/{item_id}", status_code=303)
+
+
+@app.post("/history/{item_id}/delete")
+async def delete_item(request: Request, item_id: str):
+    """Delete a saved item and return to history."""
+    db.delete_item(item_id)
+    items_store.pop(item_id, None)
+    return RedirectResponse(url="/history", status_code=303)
 
 
 if __name__ == "__main__":

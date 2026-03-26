@@ -117,6 +117,38 @@ def update_event_data(item_id: str, data: dict) -> None:
         con.commit()
 
 
+def update_item(item_id: str, rtype: str, fields: dict) -> None:
+    """Persist edited fields for any item type."""
+    # Tasks store due_date in start_date column
+    start_date = fields.get("start_date") or fields.get("due_date")
+    with _conn() as con:
+        con.execute(
+            """UPDATE items
+               SET title=?, start_date=?, end_date=?, time=?,
+                   location=?, notes=?, priority=?, remind_at=?
+               WHERE id=?""",
+            (
+                fields.get("title"),
+                start_date,
+                fields.get("end_date"),
+                fields.get("time"),
+                fields.get("location"),
+                fields.get("notes"),
+                fields.get("priority"),
+                fields.get("remind_at"),
+                item_id,
+            ),
+        )
+        con.commit()
+
+
+def delete_item(item_id: str) -> None:
+    """Permanently delete an item."""
+    with _conn() as con:
+        con.execute("DELETE FROM items WHERE id=?", (item_id,))
+        con.commit()
+
+
 def get_history(limit: int = 100) -> list:
     """Return items ordered newest first."""
     with _conn() as con:
