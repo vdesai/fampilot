@@ -402,6 +402,16 @@
         }
         .reminder-dismiss:hover { color: white; transform: none; }
 
+        /* ── Upcoming item highlight flash ── */
+        @keyframes highlightPulse {
+            0%   { background: rgba(255,220,80,0.35); box-shadow: 0 0 0 3px rgba(255,220,80,0.4); }
+            100% { background: transparent; box-shadow: none; }
+        }
+        .upcoming-item.highlight-flash {
+            animation: highlightPulse 1.8s ease-out forwards;
+            border-radius: 9px;
+        }
+
         /* ── Coming up section ── */
         .upcoming-section {
             background: rgba(255,255,255,0.12);
@@ -499,7 +509,7 @@
             <span class="reminder-banner-icon">🔔</span>
             <div class="reminder-banner-text">
                 {{ rem.title or "Reminder" }}
-                <span>Reminder triggered · <a href="/history/{{ rem.id }}" style="color:rgba(255,255,255,0.75);">view item</a></span>
+                <span>Reminder triggered · <a href="/history/{{ rem.id }}" style="color:rgba(255,255,255,0.75);" onclick="return handleViewItem(event,'{{ rem.id }}','rem-{{ rem.id }}')">view item ›</a></span>
             </div>
             <button type="button" class="reminder-dismiss" title="Dismiss" onclick="dismissBanner(this.closest('.reminder-banner'))">×</button>
         </div>
@@ -513,7 +523,7 @@
             {% set tomorrow_items = [] %}
             {% for row in upcoming %}
                 {% if loop.index <= 5 %}
-                <a href="/history/{{ row.id }}" class="upcoming-item">
+                <a href="/history/{{ row.id }}" class="upcoming-item" data-id="{{ row.id }}">
                     <span class="upcoming-icon">
                         {% if row.type == 'event' %}📅{% elif row.type == 'task' %}✅{% else %}🔔{% endif %}
                     </span>
@@ -692,6 +702,22 @@
             const rel = relativeTime(el.dataset.date, el.dataset.time);
             if (rel) el.querySelector('.upcoming-rel').textContent = rel;
         });
+
+        // ── Reminder "view item" — scroll if visible, else navigate ──
+        function handleViewItem(e, itemId, bannerId) {
+            const upcomingEl = document.querySelector(`.upcoming-item[data-id="${itemId}"]`);
+            if (upcomingEl) {
+                e.preventDefault();
+                upcomingEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                upcomingEl.classList.remove('highlight-flash'); // reset if re-triggered
+                void upcomingEl.offsetWidth;                    // force reflow
+                upcomingEl.classList.add('highlight-flash');
+                const banner = document.getElementById(bannerId);
+                if (banner) setTimeout(() => dismissBanner(banner), 300);
+            }
+            // else: let the default href navigation happen
+            return !upcomingEl;
+        }
 
         // ── Reminder banner auto-dismiss ──
         function dismissBanner(el) {
