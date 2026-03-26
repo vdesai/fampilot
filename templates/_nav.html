@@ -1,0 +1,65 @@
+<style>
+.top-nav-wrap {
+    background: rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.top-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 12px 20px;
+    gap: 12px;
+}
+.nav-brand {
+    color: white;
+    text-decoration: none;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.nav-brand:hover { opacity: 0.85; }
+.nav-links { display: flex; gap: 8px; }
+.nav-link {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border: 1.5px solid rgba(255, 255, 255, 0.28);
+    border-radius: 8px;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+.nav-link.nav-active {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.55);
+    color: white;
+}
+</style>
+
+<div class="top-nav-wrap">
+    <nav class="top-nav">
+        <a href="/" class="nav-brand">🏠 FamPilot</a>
+        <div class="nav-links">
+            <a href="/" class="nav-link {% if nav_page == 'home' %}nav-active{% endif %}">+ New</a>
+            <a href="/history" class="nav-link {% if nav_page == 'history' %}nav-active{% endif %}">📜 History</a>
+        </div>
+    </nav>
+</div>

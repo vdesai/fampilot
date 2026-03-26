@@ -15,10 +15,15 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            padding: 0;
+        }
+
+        .page-content {
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 30px 20px 40px;
+            min-height: calc(100vh - 52px);
         }
 
         .container {
@@ -359,6 +364,8 @@
     </style>
 </head>
 <body>
+    {% include "_nav.html" %}
+    <div class="page-content">
     <div class="container">
         <!-- Header -->
         <div class="header">
@@ -429,9 +436,10 @@
 
         <!-- Footer -->
         <div class="footer">
-            <p>Powered by Claude AI &nbsp;·&nbsp; <a href="/history" style="color:rgba(255,255,255,0.85);text-decoration:none;font-weight:600;">📜 History</a></p>
+            <p>Powered by Claude AI</p>
         </div>
     </div>
+    </div><!-- /page-content -->
 
     <script>
         // Tab switching

@@ -15,15 +15,12 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 40px 20px;
         }
 
         .container {
             max-width: 600px;
             width: 100%;
+            margin: 0 auto;
         }
 
         .success-card {
@@ -338,7 +335,8 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    {% include "_nav.html" %}
+    <div class="container" style="padding: 30px 20px 40px;">
         <div class="success-card">
             <!-- Success Header -->
             <div class="success-header">
@@ -438,19 +436,12 @@
                 <div class="actions">
                     <a href="/" class="button btn-primary">
                         <span>📸</span>
-                        <span>Upload Another</span>
+                        <span>New Analysis</span>
                     </a>
-                    {% if calendar_added %}
-                        <a href="https://calendar.google.com" target="_blank" class="button btn-secondary">
-                            <span>📅</span>
-                            <span>Open Calendar</span>
-                        </a>
-                    {% else %}
-                        <a href="/" class="button btn-secondary">
-                            <span>🏠</span>
-                            <span>Back Home</span>
-                        </a>
-                    {% endif %}
+                    <a href="/history" class="button btn-secondary">
+                        <span>📜</span>
+                        <span>History</span>
+                    </a>
                 </div>
             </div>
         </div>

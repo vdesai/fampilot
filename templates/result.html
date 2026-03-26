@@ -256,6 +256,7 @@
     </style>
 </head>
 <body>
+{% include "_nav.html" %}
 <div class="container">
 
 {% if error %}
@@ -264,7 +265,7 @@
         <p>Something went wrong</p>
     </div>
     <div class="message error"><span>❌</span><span>{{ error }}</span></div>
-    <div class="back-link"><a href="/">← Try again</a></div>
+    <div class="back-link"><a href="/">← Back to home</a></div>
 
 {% elif result %}
     {% set rtype = result.type %}
@@ -551,11 +552,7 @@
     </div>
     {% endif %}
 
-    <div class="back-link">
-        <a href="/">← Back to home</a>
-        &nbsp;&nbsp;·&nbsp;&nbsp;
-        <a href="/history">📜 History</a>
-    </div>
+    <div class="back-link"><a href="/">← Back to home</a></div>
 {% endif %}
 </div>
 

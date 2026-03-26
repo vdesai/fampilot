@@ -178,7 +178,7 @@ def generate_google_calendar_url(event: Dict[str, Optional[str]]) -> str:
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Render the home page with upload form."""
-    return templates.TemplateResponse(request, "index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html", {"request": request, "nav_page": "home"})
 
 
 @app.post("/upload")
@@ -449,6 +449,7 @@ async def history_page(request: Request):
     return templates.TemplateResponse(request, "history.html", {
         "request": request,
         "items": rows,
+        "nav_page": "history",
     })
 
 

@@ -163,6 +163,7 @@
     </style>
 </head>
 <body>
+{% include "_nav.html" %}
 <div class="container">
 
     <div class="header">
@@ -170,12 +171,11 @@
         <p>Everything FamPilot has analyzed</p>
     </div>
 
-    <div class="nav">
-        <a href="/">← New Analysis</a>
-        {% if items %}
-        <span class="count">{{ items | length }} item{{ 's' if items | length != 1 else '' }}</span>
-        {% endif %}
+    {% if items %}
+    <div style="text-align:right; color:rgba(255,255,255,0.65); font-size:13px; font-weight:500; margin-bottom:16px;">
+        {{ items | length }} item{{ 's' if items | length != 1 else '' }}
     </div>
+    {% endif %}
 
     {% if not items %}
     <div class="empty">
