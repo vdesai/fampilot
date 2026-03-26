@@ -20,8 +20,8 @@ from fastapi.templating import Jinja2Templates
 # Import functions from main.py
 from main import (
     extract_text_from_image,
-    extract_event_details,
-    extract_event_from_image_vision,
+    classify_and_extract,
+    classify_and_extract_from_image,
     authenticate_google_calendar,
     create_calendar_event,
     GOOGLE_CALENDAR_AVAILABLE,
@@ -34,8 +34,8 @@ app = FastAPI(title="FamPilot Event Assistant")
 # Setup templates
 templates = Jinja2Templates(directory="templates")
 
-# Temporary storage for events (in-memory, resets on restart)
-events_store = {}
+# Temporary storage for results (in-memory, resets on restart)
+items_store = {}
 
 
 def parse_time_simple(time_str: str, date_str: str) -> Tuple[Optional[datetime], Optional[datetime]]:
@@ -180,207 +180,161 @@ async def home(request: Request):
 
 @app.post("/upload")
 async def upload_image(request: Request, file: UploadFile = File(...)):
-    """
-    Handle image upload and extract event details.
-    """
+    """Handle image upload, classify content, and extract structured data."""
+    file_path = None
     try:
-        # Save uploaded file temporarily
         upload_dir = Path("uploads")
         upload_dir.mkdir(exist_ok=True)
-
         file_path = upload_dir / file.filename
-        with open(file_path, "wb") as f:
-            content = await file.read()
-            f.write(content)
 
-        # Get API key first
+        with open(file_path, "wb") as f:
+            f.write(await file.read())
+
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
-            return templates.TemplateResponse(
-                request,
-                "result.html",
-                {
-                    "request": request,
-                    "error": "ANTHROPIC_API_KEY not set. Please configure the API key."
-                }
-            )
-
-        # Extract event details using appropriate method
-        event_data = None
-        extracted_text = None
-        used_vision_fallback = False
+            return templates.TemplateResponse(request, "result.html", {
+                "request": request,
+                "error": "ANTHROPIC_API_KEY not set."
+            })
 
         try:
             if not TESSERACT_AVAILABLE:
-                # Production path: Direct vision-based extraction
-                used_vision_fallback = True
-                event_data = extract_event_from_image_vision(str(file_path), api_key)
+                result = classify_and_extract_from_image(str(file_path), api_key)
             else:
-                # Local development path: OCR then text extraction
                 extracted_text = extract_text_from_image(str(file_path))
-
-                if not extracted_text:
-                    # Try vision fallback if OCR returns nothing
-                    used_vision_fallback = True
-                    event_data = extract_event_from_image_vision(str(file_path), api_key)
+                if extracted_text:
+                    result = classify_and_extract(extracted_text, api_key)
                 else:
-                    # Process extracted text
-                    event_data = extract_event_details(extracted_text, api_key)
-
-        except Exception as extraction_error:
-            # Clean up uploaded file
-            if file_path.exists():
+                    result = classify_and_extract_from_image(str(file_path), api_key)
+        except Exception as e:
+            return templates.TemplateResponse(request, "result.html", {
+                "request": request,
+                "error": f"Failed to analyze image: {str(e)}"
+            })
+        finally:
+            if file_path and file_path.exists():
                 file_path.unlink()
 
-            return templates.TemplateResponse(
-                request,
-                "result.html",
-                {
-                    "request": request,
-                    "error": f"Failed to extract event details: {str(extraction_error)}"
-                }
-            )
-
-        # Validate event data
-        if not event_data:
-            if file_path.exists():
-                file_path.unlink()
-
-            return templates.TemplateResponse(
-                request,
-                "result.html",
-                {
-                    "request": request,
-                    "error": "Could not extract event details from the image. Please try a different image."
-                }
-            )
-
-        # Store event details with a simple ID
-        event_id = str(hash(file.filename))
-        events_store[event_id] = event_data
-
-        # Generate Google Calendar URL (fallback method)
-        calendar_url = generate_google_calendar_url(event_data)
-
-        # Clean up uploaded file
-        file_path.unlink()
-
-        # Build context for template
-        context = {
-            "request": request,
-            "event": event_data,
-            "event_id": event_id,
-            "calendar_url": calendar_url
-        }
-
-        # Only add extracted_text_length if we have text
-        if extracted_text:
-            context["extracted_text_length"] = len(extracted_text)
-
-        # Render result page with event details
-        return templates.TemplateResponse(request, "result.html", context)
+        return _render_result(request, result, file.filename)
 
     except Exception as e:
-        # Clean up file if it exists
-        try:
-            if file_path.exists():
-                file_path.unlink()
-        except:
-            pass
-
-        return templates.TemplateResponse(
-            request,
-            "result.html",
-            {
-                "request": request,
-                "error": f"Error processing image: {str(e)}"
-            }
-        )
+        if file_path and file_path.exists():
+            file_path.unlink()
+        return templates.TemplateResponse(request, "result.html", {
+            "request": request,
+            "error": f"Error processing image: {str(e)}"
+        })
 
 
-@app.post("/edit/{event_id}")
+@app.post("/process-text")
+async def process_text(request: Request, text: str = Form(...)):
+    """Handle text input, classify content, and extract structured data."""
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        return templates.TemplateResponse(request, "result.html", {
+            "request": request,
+            "error": "ANTHROPIC_API_KEY not set."
+        })
+
+    if not text.strip():
+        return templates.TemplateResponse(request, "result.html", {
+            "request": request,
+            "error": "Please enter some text to analyze."
+        })
+
+    try:
+        result = classify_and_extract(text.strip(), api_key)
+    except Exception as e:
+        return templates.TemplateResponse(request, "result.html", {
+            "request": request,
+            "error": f"Failed to analyze text: {str(e)}"
+        })
+
+    return _render_result(request, result, text[:30])
+
+
+def _render_result(request: Request, result: Dict, source_name: str):
+    """Build template context from a classified result and render result.html."""
+    item_id = str(hash(source_name))
+    items_store[item_id] = result
+
+    context = {
+        "request": request,
+        "result": result,
+        "item_id": item_id,
+    }
+
+    # Generate calendar URL only for events
+    if result.get("type") == "event":
+        context["calendar_url"] = generate_google_calendar_url(result.get("data", {}))
+
+    return templates.TemplateResponse(request, "result.html", context)
+
+
+@app.post("/edit/{item_id}")
 async def edit_event(
     request: Request,
-    event_id: str,
+    item_id: str,
     title: str = Form(...),
     start_date: str = Form(...),
     end_date: str = Form(None),
     time: str = Form(...),
     location: str = Form(None)
 ):
-    """
-    Handle event editing.
-    """
-    # Update event in store
-    event_details = {
+    """Handle event field editing (events only)."""
+    existing = items_store.get(item_id, {})
+    updated_data = {
         "title": title,
         "start_date": start_date,
         "end_date": end_date if end_date else None,
         "time": time,
         "location": location if location else None
     }
-    events_store[event_id] = event_details
+    result = {**existing, "data": updated_data}
+    items_store[item_id] = result
 
-    # Regenerate Google Calendar URL with updated details
-    calendar_url = generate_google_calendar_url(event_details)
+    calendar_url = generate_google_calendar_url(updated_data)
 
-    return templates.TemplateResponse(
-        request,
-        "result.html",
-        {
+    return templates.TemplateResponse(request, "result.html", {
+        "request": request,
+        "result": result,
+        "item_id": item_id,
+        "message": "Event updated successfully!",
+        "calendar_url": calendar_url
+    })
+
+
+@app.post("/confirm/{item_id}")
+async def confirm_event(request: Request, item_id: str):
+    """Confirm event and add to Google Calendar."""
+    item = items_store.get(item_id)
+
+    if not item:
+        return templates.TemplateResponse(request, "result.html", {
             "request": request,
-            "event": event_details,
-            "event_id": event_id,
-            "message": "Event updated successfully!",
-            "calendar_url": calendar_url
-        }
-    )
+            "error": "Item not found. Please upload again."
+        })
 
-
-@app.post("/confirm/{event_id}")
-async def confirm_event(request: Request, event_id: str):
-    """
-    Confirm event and add to Google Calendar.
-    """
-    event = events_store.get(event_id)
-
-    if not event:
-        return templates.TemplateResponse(
-            request,
-            "result.html",
-            {
-                "request": request,
-                "error": "Event not found. Please upload the image again."
-            }
-        )
-
-    # Try to add to Google Calendar
+    event_data = item.get("data", {})
     calendar_service = None
     calendar_link = None
 
     if GOOGLE_CALENDAR_AVAILABLE:
         calendar_service = authenticate_google_calendar()
         if calendar_service:
-            success = create_calendar_event(event, calendar_service)
+            success = create_calendar_event(event_data, calendar_service)
             if success:
-                # Note: We can't easily get the link back from create_calendar_event
-                # without modifying it, so we'll just show success
                 calendar_link = "Event added to Google Calendar successfully!"
 
-    # Generate Google Calendar URL (no-auth method)
-    calendar_url = generate_google_calendar_url(event)
+    calendar_url = generate_google_calendar_url(event_data)
 
-    return templates.TemplateResponse(
-        request,
-        "confirmed.html",
-        {
-            "request": request,
-            "event": event,
-            "calendar_added": calendar_service is not None,
-            "calendar_link": calendar_link,
-            "calendar_url": calendar_url
-        }
-    )
+    return templates.TemplateResponse(request, "confirmed.html", {
+        "request": request,
+        "event": event_data,
+        "calendar_added": calendar_service is not None,
+        "calendar_link": calendar_link,
+        "calendar_url": calendar_url
+    })
 
 
 @app.post("/cancel")

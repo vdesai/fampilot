@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Details - FamPilot</title>
+    <title>Result - FamPilot</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -18,255 +14,153 @@
             padding: 40px 20px;
         }
 
-        .container {
-            max-width: 700px;
-            margin: 0 auto;
-        }
+        .container { max-width: 700px; margin: 0 auto; }
 
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 28px; color: white; margin-bottom: 8px; font-weight: 600; }
+        .header p { color: rgba(255,255,255,0.9); font-size: 16px; }
 
-        .header h1 {
-            font-size: 28px;
-            color: white;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-
-        .header p {
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 16px;
-        }
-
-        /* Success Message */
-        .message {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        /* Type badge */
+        .type-badge-row {
             display: flex;
             align-items: center;
-            gap: 15px;
-            animation: slideDown 0.4s ease-out;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
         }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
+        .type-badge.event  { background: #e8f5e9; color: #2e7d32; }
+        .type-badge.task   { background: #fff3e0; color: #e65100; }
+        .type-badge.reminder { background: #e3f2fd; color: #1565c0; }
 
-        .message.success {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            color: #155724;
-        }
-
-        .message.error {
-            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-            color: #721c24;
-        }
-
-        .message-icon {
-            font-size: 24px;
-        }
-
-        .message-text {
-            flex: 1;
+        .confidence {
+            font-size: 13px;
+            color: rgba(255,255,255,0.85);
             font-weight: 500;
         }
 
-        /* Event Card */
-        .event-card {
+        /* Reasoning */
+        .reasoning-box {
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            color: rgba(255,255,255,0.95);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .reasoning-box strong { display: block; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
+
+        /* Message */
+        .message {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideDown 0.4s ease-out;
+        }
+        @keyframes slideDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+        .message.success { background: linear-gradient(135deg, #d4edda, #c3e6cb); color: #155724; }
+        .message.error   { background: linear-gradient(135deg, #f8d7da, #f5c6cb); color: #721c24; }
+
+        /* Card */
+        .card {
             background: white;
             border-radius: 16px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
             overflow: hidden;
             margin-bottom: 25px;
             animation: fadeInUp 0.5s ease-out;
         }
+        @keyframes fadeInUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .event-card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .card-header {
             padding: 25px 30px;
             color: white;
         }
+        .card-header.event    { background: linear-gradient(135deg, #43a047, #1b5e20); }
+        .card-header.task     { background: linear-gradient(135deg, #fb8c00, #bf360c); }
+        .card-header.reminder { background: linear-gradient(135deg, #1e88e5, #0d47a1); }
 
-        .event-card-header h2 {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
+        .card-header h2 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+        .card-header .subtitle { font-size: 14px; opacity: 0.85; }
 
-        .event-card-header .subtitle {
-            font-size: 14px;
-            opacity: 0.9;
-        }
+        .card-body { padding: 25px 30px; }
 
-        .event-card-body {
-            padding: 30px;
-        }
-
-        /* Individual Field Cards */
-        .field-grid {
-            display: grid;
-            gap: 15px;
-        }
-
+        .field-grid { display: grid; gap: 14px; }
         .field-card {
             background: #f8f9ff;
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 10px;
+            padding: 16px 18px;
             border-left: 4px solid #667eea;
-            transition: all 0.2s;
         }
-
-        .field-card:hover {
-            background: #f0f2ff;
-            transform: translateX(5px);
-        }
+        .field-card.task-card     { border-left-color: #fb8c00; }
+        .field-card.reminder-card { border-left-color: #1e88e5; }
 
         .field-label {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            font-weight: 600;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 700;
             color: #667eea;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
-        }
-
-        .field-icon {
-            font-size: 16px;
-        }
-
-        .field-value {
-            font-size: 18px;
-            color: #333;
-            font-weight: 500;
-            line-height: 1.4;
-        }
-
-        .field-value.large {
-            font-size: 20px;
-            font-weight: 600;
-        }
-
-        /* Multi-day indicator */
-        .date-range {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .date-badge {
-            background: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            color: #667eea;
-            border: 2px solid #667eea;
-        }
-
-        .date-arrow {
-            color: #999;
-            font-weight: bold;
-        }
-
-        /* Edit Form */
-        .edit-form {
-            display: none;
-            padding: 30px;
-            background: white;
-        }
-
-        .edit-form.show {
-            display: block;
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .edit-form .form-group {
-            margin-bottom: 20px;
-        }
-
-        .edit-form label {
-            display: block;
-            font-weight: 600;
-            color: #667eea;
-            font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 8px;
         }
+        .field-label.task     { color: #fb8c00; }
+        .field-label.reminder { color: #1e88e5; }
 
-        .edit-form input {
-            width: 100%;
-            padding: 14px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            color: #333;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
+        .field-value { font-size: 17px; color: #333; font-weight: 500; }
+        .field-value.large { font-size: 19px; font-weight: 600; }
 
-        .edit-form input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        .priority-badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
         }
+        .priority-high   { background: #ffebee; color: #c62828; }
+        .priority-medium { background: #fff3e0; color: #e65100; }
+        .priority-low    { background: #e8f5e9; color: #2e7d32; }
 
-        .edit-form input::placeholder {
-            color: #999;
-        }
+        .date-range { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .date-badge { background: white; padding: 6px 14px; border-radius: 8px; font-weight: 600; color: #43a047; border: 2px solid #43a047; }
+        .date-arrow { color: #999; font-weight: bold; }
 
-        /* Action Buttons */
-        .actions {
-            padding: 0 30px 30px 30px;
-        }
+        /* Edit form */
+        .edit-form { display: none; padding: 25px 30px; background: white; }
+        .edit-form.show { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        .edit-form .form-group { margin-bottom: 18px; }
+        .edit-form label { display: block; font-weight: 600; color: #667eea; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .edit-form input { width: 100%; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 15px; color: #333; transition: all 0.2s; font-family: inherit; }
+        .edit-form input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
 
-        .button-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 15px;
-        }
-
-        .button-group.edit-buttons {
-            grid-template-columns: 2fr 1fr;
-        }
+        /* Actions */
+        .actions { padding: 0 30px 28px 30px; }
+        .button-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+        .button-group.edit-buttons { grid-template-columns: 2fr 1fr; }
 
         button, .button {
-            padding: 16px 24px;
+            padding: 14px 20px;
             border: none;
             border-radius: 10px;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
@@ -277,371 +171,280 @@
             text-decoration: none;
             font-family: inherit;
         }
+        .btn-confirm { background: linear-gradient(135deg, #28a745, #20c997); color: white; box-shadow: 0 4px 12px rgba(40,167,69,0.3); }
+        .btn-confirm:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(40,167,69,0.4); }
+        .btn-edit { background: linear-gradient(135deg, #667eea, #764ba2); color: white; box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+        .btn-edit:hover { transform: translateY(-2px); }
+        .btn-cancel { background: white; color: #666; border: 2px solid #ddd; }
+        .btn-cancel:hover { background: #f8f9fa; border-color: #999; }
+        .btn-save { background: linear-gradient(135deg, #28a745, #20c997); color: white; }
+        .btn-save:hover { transform: translateY(-2px); }
+        .btn-calendar-quick { background: linear-gradient(135deg, #43a047, #1b5e20); color: white; padding: 16px 28px; font-size: 16px; box-shadow: 0 4px 12px rgba(67,160,71,0.3); }
+        .btn-calendar-quick:hover { transform: translateY(-2px); }
 
-        .btn-confirm {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-        }
+        .quick-add-section { margin-top: 25px; padding-top: 25px; border-top: 2px solid #f0f0f0; text-align: center; }
+        .quick-add-title { font-size: 16px; font-weight: 700; color: #333; margin-bottom: 6px; }
+        .quick-add-desc { font-size: 13px; color: #999; margin-bottom: 16px; }
 
-        .btn-confirm:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
-        }
+        .back-link { text-align: center; margin-top: 14px; }
+        .back-link a { color: white; text-decoration: none; font-weight: 500; font-size: 15px; opacity: 0.9; }
+        .back-link a:hover { opacity: 1; text-decoration: underline; }
 
-        .btn-edit {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn-edit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-cancel {
-            background: white;
-            color: #666;
-            border: 2px solid #ddd;
-        }
-
-        .btn-cancel:hover {
-            background: #f8f9fa;
-            border-color: #999;
-        }
-
-        .btn-save {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-        }
-
-        .btn-save:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
-        }
-
-        .btn-back {
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
-        }
-
-        .btn-back:hover {
-            background: #f8f9ff;
-        }
-
-        .btn-calendar-quick {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-            padding: 18px 32px;
-            font-size: 17px;
-            font-weight: 600;
-        }
-
-        .btn-calendar-quick:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        /* Quick Add Section */
-        .quick-add-section {
-            margin-top: 30px;
-            padding-top: 30px;
-            border-top: 2px solid #f0f0f0;
-            text-align: center;
-        }
-
-        .quick-add-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 8px;
-            text-align: center;
-        }
-
-        .quick-add-description {
-            font-size: 14px;
-            color: #999;
-            text-align: center;
-            margin-bottom: 20px;
-            line-height: 1.5;
-            font-weight: 500;
-        }
-
-        /* Info Footer */
-        .info-footer {
-            text-align: center;
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 14px;
-            margin-top: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .back-link {
-            text-align: center;
-            margin-top: 15px;
-        }
-
-        .back-link a {
-            color: white;
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 15px;
-            opacity: 0.9;
-            transition: opacity 0.2s;
-        }
-
-        .back-link a:hover {
-            opacity: 1;
-            text-decoration: underline;
-        }
-
-        /* Responsive */
         @media (max-width: 600px) {
-            .button-group {
-                grid-template-columns: 1fr;
-            }
-
-            .button-group.edit-buttons {
-                grid-template-columns: 1fr;
-            }
-
-            .event-card-header,
-            .event-card-body,
-            .actions {
-                padding: 20px;
-            }
-
-            .date-range {
-                flex-direction: column;
-                align-items: stretch;
-            }
+            .button-group, .button-group.edit-buttons { grid-template-columns: 1fr; }
+            .card-header, .card-body, .actions { padding: 20px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        {% if error %}
-            <div class="header">
-                <h1>⚠️ Processing Error</h1>
-                <p>Something went wrong</p>
-            </div>
+<div class="container">
 
-            <div class="message error">
-                <span class="message-icon">❌</span>
-                <span class="message-text">{{ error }}</span>
-            </div>
+{% if error %}
+    <div class="header">
+        <h1>⚠️ Error</h1>
+        <p>Something went wrong</p>
+    </div>
+    <div class="message error">
+        <span>❌</span>
+        <span>{{ error }}</span>
+    </div>
+    <div class="back-link"><a href="/">← Try again</a></div>
 
-            <div class="back-link">
-                <a href="/">← Try another image</a>
-            </div>
+{% elif result %}
+    {% set rtype = result.type %}
+    {% set data  = result.data %}
 
-        {% elif event %}
-            <div class="header">
-                <h1>📋 Event Extracted</h1>
-                <p>Review and confirm the details below</p>
-            </div>
-
-            {% if message %}
-                <div class="message success">
-                    <span class="message-icon">✓</span>
-                    <span class="message-text">{{ message }}</span>
-                </div>
-            {% endif %}
-
-            <div class="event-card">
-                <!-- Event Header -->
-                <div class="event-card-header">
-                    <h2>{{ event.title or "Untitled Event" }}</h2>
-                    {% if event.start_date %}
-                        <div class="subtitle">
-                            {% if event.end_date %}
-                                {{ event.start_date }} to {{ event.end_date }}
-                            {% else %}
-                                {{ event.start_date }}
-                            {% endif %}
-                        </div>
-                    {% endif %}
-                </div>
-
-                <!-- Event Body - Display Mode -->
-                <div class="event-card-body" id="displayMode">
-                    <div class="field-grid">
-                        <!-- Title -->
-                        {% if event.title %}
-                        <div class="field-card">
-                            <div class="field-label">
-                                <span class="field-icon">📌</span>
-                                <span>Event Title</span>
-                            </div>
-                            <div class="field-value large">{{ event.title }}</div>
-                        </div>
-                        {% endif %}
-
-                        <!-- Date(s) -->
-                        {% if event.start_date %}
-                        <div class="field-card">
-                            <div class="field-label">
-                                <span class="field-icon">📅</span>
-                                <span>
-                                    {% if event.end_date %}
-                                        Event Dates
-                                    {% else %}
-                                        Event Date
-                                    {% endif %}
-                                </span>
-                            </div>
-                            {% if event.end_date %}
-                                <div class="date-range">
-                                    <div class="date-badge">{{ event.start_date }}</div>
-                                    <span class="date-arrow">→</span>
-                                    <div class="date-badge">{{ event.end_date }}</div>
-                                </div>
-                            {% else %}
-                                <div class="field-value">{{ event.start_date }}</div>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-
-                        <!-- Time -->
-                        {% if event.time %}
-                        <div class="field-card">
-                            <div class="field-label">
-                                <span class="field-icon">🕐</span>
-                                <span>Time</span>
-                            </div>
-                            <div class="field-value">{{ event.time }}</div>
-                        </div>
-                        {% endif %}
-
-                        <!-- Location (only show if present) -->
-                        {% if event.location %}
-                        <div class="field-card">
-                            <div class="field-label">
-                                <span class="field-icon">📍</span>
-                                <span>Location</span>
-                            </div>
-                            <div class="field-value">{{ event.location }}</div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Event Body - Edit Mode -->
-                <form id="editForm" class="edit-form" action="/edit/{{ event_id }}" method="post">
-                    <div class="form-group">
-                        <label for="title">📌 Event Title</label>
-                        <input type="text" id="title" name="title" value="{{ event.title or '' }}" required placeholder="Enter event title">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="start_date">📅 Start Date</label>
-                        <input type="date" id="start_date" name="start_date" value="{{ event.start_date or '' }}" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="end_date">📅 End Date (optional)</label>
-                        <input type="date" id="end_date" name="end_date" value="{{ event.end_date or '' }}" placeholder="Leave blank for single-day event">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="time">🕐 Time</label>
-                        <input type="text" id="time" name="time" value="{{ event.time or '' }}" placeholder="e.g., 10AM-4PM or 6:00 PM">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="location">📍 Location (optional)</label>
-                        <input type="text" id="location" name="location" value="{{ event.location or '' }}" placeholder="Enter venue or address">
-                    </div>
-                </form>
-
-                <!-- Action Buttons -->
-                <div class="actions">
-                    <!-- Display Mode Buttons -->
-                    <div id="actionButtons" class="button-group">
-                        <form action="/confirm/{{ event_id }}" method="post" style="display: contents;">
-                            <button type="submit" class="btn-confirm">
-                                <span>✓</span>
-                                <span>Confirm</span>
-                            </button>
-                        </form>
-                        <button type="button" class="btn-edit" onclick="showEdit()">
-                            <span>✏️</span>
-                            <span>Edit</span>
-                        </button>
-                        <form action="/cancel" method="post" style="display: contents;">
-                            <button type="submit" class="btn-cancel">
-                                <span>✗</span>
-                                <span>Cancel</span>
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Edit Mode Buttons -->
-                    <div id="editButtons" class="button-group edit-buttons" style="display: none;">
-                        <button type="submit" form="editForm" class="btn-save">
-                            <span>💾</span>
-                            <span>Save Changes</span>
-                        </button>
-                        <button type="button" class="btn-cancel" onclick="cancelEdit()">
-                            <span>Cancel</span>
-                        </button>
-                    </div>
-
-                    <!-- Quick Add to Calendar (No Auth Required) -->
-                    {% if calendar_url %}
-                    <div class="quick-add-section">
-                        <div class="quick-add-title">⚡ Add to your calendar instantly</div>
-                        <div class="quick-add-description">
-                            No login required. One click to add.
-                        </div>
-                        <a href="{{ calendar_url }}" target="_blank" class="button btn-calendar-quick">
-                            <span>📅</span>
-                            <span>Add to Google Calendar</span>
-                        </a>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            {% if extracted_text_length %}
-            <div class="info-footer">
-                <span>✓</span>
-                <span>Extracted {{ extracted_text_length }} characters from image</span>
-            </div>
-            {% endif %}
-
-            <div class="back-link">
-                <a href="/">← Upload another image</a>
-            </div>
+    <div class="header">
+        {% if rtype == "event" %}
+            <h1>📋 Event Detected</h1>
+        {% elif rtype == "task" %}
+            <h1>✅ Task Detected</h1>
+        {% else %}
+            <h1>🔔 Reminder Detected</h1>
         {% endif %}
+        <p>Review the details below</p>
     </div>
 
-    <script>
-        function showEdit() {
-            document.getElementById('displayMode').style.display = 'none';
-            document.getElementById('editForm').classList.add('show');
-            document.getElementById('actionButtons').style.display = 'none';
-            document.getElementById('editButtons').style.display = 'grid';
-        }
+    <!-- Type badge + confidence -->
+    <div class="type-badge-row">
+        <span class="type-badge {{ rtype }}">
+            {% if rtype == "event" %}📅 Event
+            {% elif rtype == "task" %}✅ Task
+            {% else %}🔔 Reminder{% endif %}
+        </span>
+        <span class="confidence">{{ (result.confidence * 100) | int }}% confidence</span>
+    </div>
 
-        function cancelEdit() {
-            document.getElementById('displayMode').style.display = 'block';
-            document.getElementById('editForm').classList.remove('show');
-            document.getElementById('actionButtons').style.display = 'grid';
-            document.getElementById('editButtons').style.display = 'none';
-        }
-    </script>
+    <!-- Reasoning -->
+    {% if result.reasoning %}
+    <div class="reasoning-box">
+        <strong>AI Reasoning</strong>
+        {{ result.reasoning }}
+    </div>
+    {% endif %}
+
+    {% if message %}
+    <div class="message success"><span>✓</span><span>{{ message }}</span></div>
+    {% endif %}
+
+    <div class="card">
+        <!-- Card Header -->
+        <div class="card-header {{ rtype }}">
+            <h2>{{ data.title or "Untitled" }}</h2>
+            {% if rtype == "event" and data.start_date %}
+                <div class="subtitle">
+                    {% if data.end_date %}{{ data.start_date }} → {{ data.end_date }}
+                    {% else %}{{ data.start_date }}{% endif %}
+                </div>
+            {% elif rtype == "task" and data.due_date %}
+                <div class="subtitle">Due: {{ data.due_date }}</div>
+            {% elif rtype == "reminder" and data.remind_at %}
+                <div class="subtitle">{{ data.remind_at }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Display Mode -->
+        <div class="card-body" id="displayMode">
+            <div class="field-grid">
+
+                {% if rtype == "event" %}
+                    <!-- EVENT fields -->
+                    {% if data.title %}
+                    <div class="field-card">
+                        <div class="field-label">📌 Title</div>
+                        <div class="field-value large">{{ data.title }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if data.start_date %}
+                    <div class="field-card">
+                        <div class="field-label">📅 Date</div>
+                        {% if data.end_date %}
+                        <div class="date-range">
+                            <div class="date-badge">{{ data.start_date }}</div>
+                            <span class="date-arrow">→</span>
+                            <div class="date-badge">{{ data.end_date }}</div>
+                        </div>
+                        {% else %}
+                        <div class="field-value">{{ data.start_date }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if data.time %}
+                    <div class="field-card">
+                        <div class="field-label">🕐 Time</div>
+                        <div class="field-value">{{ data.time }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if data.location %}
+                    <div class="field-card">
+                        <div class="field-label">📍 Location</div>
+                        <div class="field-value">{{ data.location }}</div>
+                    </div>
+                    {% endif %}
+
+                {% elif rtype == "task" %}
+                    <!-- TASK fields -->
+                    {% if data.title %}
+                    <div class="field-card task-card">
+                        <div class="field-label task">✅ Task</div>
+                        <div class="field-value large">{{ data.title }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if data.due_date %}
+                    <div class="field-card task-card">
+                        <div class="field-label task">📅 Due Date</div>
+                        <div class="field-value">{{ data.due_date }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if data.priority %}
+                    <div class="field-card task-card">
+                        <div class="field-label task">🎯 Priority</div>
+                        <div class="field-value">
+                            <span class="priority-badge priority-{{ data.priority }}">{{ data.priority | capitalize }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if data.notes %}
+                    <div class="field-card task-card">
+                        <div class="field-label task">📝 Notes</div>
+                        <div class="field-value">{{ data.notes }}</div>
+                    </div>
+                    {% endif %}
+
+                {% else %}
+                    <!-- REMINDER fields -->
+                    {% if data.title %}
+                    <div class="field-card reminder-card">
+                        <div class="field-label reminder">🔔 Reminder</div>
+                        <div class="field-value large">{{ data.title }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if data.remind_at %}
+                    <div class="field-card reminder-card">
+                        <div class="field-label reminder">⏰ When</div>
+                        <div class="field-value">{{ data.remind_at }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if data.notes %}
+                    <div class="field-card reminder-card">
+                        <div class="field-label reminder">📝 Notes</div>
+                        <div class="field-value">{{ data.notes }}</div>
+                    </div>
+                    {% endif %}
+                {% endif %}
+
+            </div>
+        </div>
+
+        {% if rtype == "event" %}
+        <!-- Edit Form (events only) -->
+        <form id="editForm" class="edit-form" action="/edit/{{ item_id }}" method="post">
+            <div class="form-group">
+                <label>📌 Title</label>
+                <input type="text" name="title" value="{{ data.title or '' }}" required>
+            </div>
+            <div class="form-group">
+                <label>📅 Start Date</label>
+                <input type="date" name="start_date" value="{{ data.start_date or '' }}" required>
+            </div>
+            <div class="form-group">
+                <label>📅 End Date (optional)</label>
+                <input type="date" name="end_date" value="{{ data.end_date or '' }}">
+            </div>
+            <div class="form-group">
+                <label>🕐 Time</label>
+                <input type="text" name="time" value="{{ data.time or '' }}" placeholder="e.g., 10AM-4PM">
+            </div>
+            <div class="form-group">
+                <label>📍 Location (optional)</label>
+                <input type="text" name="location" value="{{ data.location or '' }}" placeholder="Venue or address">
+            </div>
+        </form>
+        {% endif %}
+
+        <!-- Actions -->
+        <div class="actions">
+            {% if rtype == "event" %}
+            <!-- Event action buttons -->
+            <div id="actionButtons" class="button-group">
+                <form action="/confirm/{{ item_id }}" method="post" style="display:contents;">
+                    <button type="submit" class="btn-confirm">✓ Confirm</button>
+                </form>
+                <button type="button" class="btn-edit" onclick="showEdit()">✏️ Edit</button>
+                <form action="/cancel" method="post" style="display:contents;">
+                    <button type="submit" class="btn-cancel">✗ Cancel</button>
+                </form>
+            </div>
+            <div id="editButtons" class="button-group edit-buttons" style="display:none;">
+                <button type="submit" form="editForm" class="btn-save">💾 Save Changes</button>
+                <button type="button" class="btn-cancel" onclick="cancelEdit()">Cancel</button>
+            </div>
+
+            {% if calendar_url %}
+            <div class="quick-add-section">
+                <div class="quick-add-title">⚡ Add to your calendar instantly</div>
+                <div class="quick-add-desc">No login required. One click to add.</div>
+                <a href="{{ calendar_url }}" target="_blank" class="button btn-calendar-quick">
+                    📅 Add to Google Calendar
+                </a>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <!-- Task / Reminder — just a back button -->
+            <div class="button-group" style="grid-template-columns: 1fr;">
+                <a href="/" class="button btn-edit">+ Analyze Another</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="back-link"><a href="/">← Back to home</a></div>
+{% endif %}
+
+</div>
+
+<script>
+    function showEdit() {
+        document.getElementById('displayMode').style.display = 'none';
+        document.getElementById('editForm').classList.add('show');
+        document.getElementById('actionButtons').style.display = 'none';
+        document.getElementById('editButtons').style.display = 'grid';
+    }
+    function cancelEdit() {
+        document.getElementById('displayMode').style.display = 'block';
+        document.getElementById('editForm').classList.remove('show');
+        document.getElementById('actionButtons').style.display = 'grid';
+        document.getElementById('editButtons').style.display = 'none';
+    }
+</script>
 </body>
 </html>

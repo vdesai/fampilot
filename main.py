@@ -185,7 +185,121 @@ CRITICAL: Return ONLY the raw JSON object. No markdown, no code blocks, no expla
 
 
 # ============================================================================
-# AI EVENT EXTRACTION
+# AI CLASSIFICATION & EXTRACTION
+# ============================================================================
+
+CLASSIFY_PROMPT = """Analyze the input and classify it as one of: event, task, or reminder.
+
+Return ONLY raw JSON in this exact format:
+{
+  "type": "event",
+  "confidence": 0.95,
+  "reasoning": "brief explanation",
+  "data": {}
+}
+
+Classification rules:
+- event: Something happening at a specific time/place (party, meeting, concert, appointment, flyer, invitation)
+- task: Something that needs to be done (to-do, checklist, action item)
+- reminder: A note to remember something (take medicine, follow up, check something)
+
+Data fields by type:
+- event data: {"title": str, "start_date": "YYYY-MM-DD or null", "end_date": "YYYY-MM-DD or null", "time": "str or null", "location": "str or null"}
+- task data: {"title": str, "due_date": "YYYY-MM-DD or null", "priority": "high/medium/low", "notes": "str or null"}
+- reminder data: {"title": str, "remind_at": "str or null", "notes": "str or null"}
+
+CRITICAL: Return ONLY the raw JSON object. No markdown, no code blocks."""
+
+
+def classify_and_extract(text: str, api_key: str) -> Dict:
+    """
+    Classify text as event/task/reminder and extract structured data.
+
+    Returns:
+        {"type": str, "confidence": float, "reasoning": str, "data": dict}
+    """
+    client = Anthropic(api_key=api_key)
+
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": f"{CLASSIFY_PROMPT}\n\nText:\n{text}"}]
+    )
+
+    cleaned = clean_json_response(message.content[0].text)
+    return json.loads(cleaned)
+
+
+MAX_IMAGE_BYTES = 4 * 1024 * 1024  # 4MB — stay under Claude's 5MB base64 limit
+
+
+def _compress_image(image_path: Path) -> tuple[bytes, str]:
+    """Return (image_bytes, media_type), compressing/resizing if over MAX_IMAGE_BYTES."""
+    from PIL import Image
+    import io
+
+    img = Image.open(image_path)
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+
+    # Try progressively lower quality until under the limit
+    for quality in (85, 70, 55, 40):
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=quality, optimize=True)
+        data = buf.getvalue()
+        if len(data) <= MAX_IMAGE_BYTES:
+            return data, "image/jpeg"
+
+    # Still too large — also scale down
+    w, h = img.size
+    img = img.resize((w // 2, h // 2), Image.LANCZOS)
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=60, optimize=True)
+    return buf.getvalue(), "image/jpeg"
+
+
+def classify_and_extract_from_image(image_path: str, api_key: str) -> Dict:
+    """
+    Classify image content and extract structured data using Claude Vision.
+
+    Returns:
+        {"type": str, "confidence": float, "reasoning": str, "data": dict}
+    """
+    import base64
+
+    image_file = Path(image_path)
+    if not image_file.exists():
+        raise FileNotFoundError(f"Image file not found: {image_path}")
+
+    raw = image_file.read_bytes()
+    if len(raw) > MAX_IMAGE_BYTES:
+        raw, media_type = _compress_image(image_file)
+    else:
+        media_types = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp'}
+        media_type = media_types.get(image_file.suffix.lower(), 'image/jpeg')
+
+    image_data = base64.standard_b64encode(raw).decode("utf-8")
+
+    client = Anthropic(api_key=api_key)
+
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1024,
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
+                {"type": "text", "text": CLASSIFY_PROMPT}
+            ]
+        }]
+    )
+
+    cleaned = clean_json_response(message.content[0].text)
+    return json.loads(cleaned)
+
+
+# ============================================================================
+# AI EVENT EXTRACTION (legacy — kept for Google Calendar integration)
 # ============================================================================
 
 def clean_json_response(response: str) -> str:

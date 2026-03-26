@@ -230,6 +230,57 @@
             display: none;
         }
 
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .tab {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            font-size: 15px;
+            font-weight: 600;
+            color: #999;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .tab.active {
+            border-color: #667eea;
+            color: #667eea;
+            background: #f8f9ff;
+        }
+        .tab:hover:not(.active) {
+            border-color: #ccc;
+            color: #666;
+        }
+
+        /* Textarea */
+        textarea {
+            width: 100%;
+            height: 140px;
+            padding: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            color: #333;
+            resize: vertical;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+            line-height: 1.5;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        textarea::placeholder { color: #aaa; }
+
         /* Features Section */
         .features {
             margin-top: 30px;
@@ -319,45 +370,58 @@
         <!-- Main Card -->
         <div class="card">
             <div class="card-body">
-                <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
-                    <!-- Upload Area -->
-                    <div class="upload-area" id="uploadArea">
-                        <div class="upload-icon">📸</div>
-                        <div class="upload-text">Click to upload or drag & drop</div>
-                        <div class="upload-subtext">PNG, JPG, or JPEG • Max 10MB</div>
-                        <input type="file" id="fileInput" name="file" accept="image/*" required>
-                    </div>
 
-                    <!-- Selected File Name -->
-                    <div class="file-name" id="fileName">
-                        <span class="file-name-icon">✓</span>
-                        <span id="fileNameText"></span>
-                    </div>
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button type="button" class="tab active" id="tabImage" onclick="switchTab('image')">📸 Image</button>
+                    <button type="button" class="tab" id="tabText" onclick="switchTab('text')">✍️ Text</button>
+                </div>
 
-                    <!-- Submit Button -->
-                    <button type="submit" id="submitBtn" disabled>
-                        <span class="spinner"></span>
-                        <span class="button-text">
-                            <span>🚀</span>
-                            <span>Extract Event Details</span>
-                        </span>
-                    </button>
-                </form>
+                <!-- Image Upload Tab -->
+                <div id="panelImage">
+                    <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-icon">📸</div>
+                            <div class="upload-text">Click to upload or drag & drop</div>
+                            <div class="upload-subtext">PNG, JPG, or JPEG • Max 10MB</div>
+                            <input type="file" id="fileInput" name="file" accept="image/*" required>
+                        </div>
+                        <div class="file-name" id="fileName">
+                            <span class="file-name-icon">✓</span>
+                            <span id="fileNameText"></span>
+                        </div>
+                        <button type="submit" id="submitBtn" disabled>
+                            <span class="spinner"></span>
+                            <span class="button-text">🚀 Analyze Image</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Text Input Tab -->
+                <div id="panelText" style="display:none;">
+                    <form id="textForm" action="/process-text" method="post">
+                        <textarea id="textInput" name="text" placeholder="Paste or type anything — an event description, a to-do item, a reminder note..." required></textarea>
+                        <button type="submit" id="textSubmitBtn" disabled>
+                            <span class="spinner" id="textSpinner"></span>
+                            <span class="button-text" id="textBtnLabel">🚀 Analyze Text</span>
+                        </button>
+                    </form>
+                </div>
 
                 <!-- Features -->
                 <div class="features">
-                    <div class="features-title">How it works</div>
-                    <div class="feature">
-                        <span class="feature-icon">🤖</span>
-                        <span class="feature-text">AI-powered event extraction</span>
-                    </div>
+                    <div class="features-title">What it detects</div>
                     <div class="feature">
                         <span class="feature-icon">📅</span>
-                        <span class="feature-text">Google Calendar integration</span>
+                        <span class="feature-text">Events — adds to Google Calendar</span>
                     </div>
                     <div class="feature">
-                        <span class="feature-icon">✏️</span>
-                        <span class="feature-text">Edit before confirming</span>
+                        <span class="feature-icon">✅</span>
+                        <span class="feature-text">Tasks — with priority and due date</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">🔔</span>
+                        <span class="feature-text">Reminders — with time and notes</span>
                     </div>
                 </div>
             </div>
@@ -365,24 +429,29 @@
 
         <!-- Footer -->
         <div class="footer">
-            <p>Powered by Claude AI & Tesseract OCR</p>
+            <p>Powered by Claude AI</p>
         </div>
     </div>
 
     <script>
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const fileName = document.getElementById('fileName');
+        // Tab switching
+        function switchTab(tab) {
+            document.getElementById('panelImage').style.display = tab === 'image' ? 'block' : 'none';
+            document.getElementById('panelText').style.display  = tab === 'text'  ? 'block' : 'none';
+            document.getElementById('tabImage').classList.toggle('active', tab === 'image');
+            document.getElementById('tabText').classList.toggle('active', tab === 'text');
+        }
+
+        // Image upload
+        const uploadArea  = document.getElementById('uploadArea');
+        const fileInput   = document.getElementById('fileInput');
+        const fileName    = document.getElementById('fileName');
         const fileNameText = document.getElementById('fileNameText');
-        const submitBtn = document.getElementById('submitBtn');
-        const uploadForm = document.getElementById('uploadForm');
+        const submitBtn   = document.getElementById('submitBtn');
+        const uploadForm  = document.getElementById('uploadForm');
 
-        // Click to upload
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
+        uploadArea.addEventListener('click', () => fileInput.click());
 
-        // File selection handler
         function handleFileSelect(file) {
             if (file && file.type.startsWith('image/')) {
                 fileNameText.textContent = file.name;
@@ -390,38 +459,30 @@
                 submitBtn.disabled = false;
             }
         }
+        fileInput.addEventListener('change', (e) => handleFileSelect(e.target.files[0]));
 
-        // File input change
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            handleFileSelect(file);
-        });
-
-        // Drag and drop
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-
+        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-
             const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) {
-                fileInput.files = e.dataTransfer.files;
-                handleFileSelect(file);
-            }
+            if (file && file.type.startsWith('image/')) { fileInput.files = e.dataTransfer.files; handleFileSelect(file); }
         });
 
-        // Form submission
-        uploadForm.addEventListener('submit', (e) => {
-            submitBtn.classList.add('loading');
-            submitBtn.disabled = true;
+        uploadForm.addEventListener('submit', () => { submitBtn.classList.add('loading'); submitBtn.disabled = true; });
+
+        // Text input
+        const textInput     = document.getElementById('textInput');
+        const textSubmitBtn = document.getElementById('textSubmitBtn');
+        const textForm      = document.getElementById('textForm');
+
+        textInput.addEventListener('input', () => {
+            textSubmitBtn.disabled = textInput.value.trim().length === 0;
+        });
+        textForm.addEventListener('submit', () => {
+            textSubmitBtn.classList.add('loading');
+            textSubmitBtn.disabled = true;
         });
     </script>
 </body>
