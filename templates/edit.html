@@ -154,6 +154,16 @@
 
         .reminder-group { margin-top: 8px; padding-top: 18px; border-top: 2px solid #f0f0f0; }
 
+        #reminderHint {
+            display: block;
+            margin-top: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #667eea;
+            min-height: 18px;
+        }
+        #reminderHint.past { color: #e53935; }
+
         .preset-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
         .preset {
             padding: 5px 12px;
@@ -271,6 +281,7 @@
                     <label class="common-label">🔔 Remind me at</label>
                     <input type="datetime-local" name="reminder_time" id="reminderTime"
                            value="{{ row.reminder_time[:16] if row.reminder_time else '' }}">
+                    <small id="reminderHint"></small>
                     <div class="preset-btns">
                         <button type="button" class="preset" onclick="setPreset('day-of')">Day of (9 AM)</button>
                         <button type="button" class="preset" onclick="setPreset('1day')">1 day before</button>
@@ -327,6 +338,41 @@ function _toLocalISO(d) {
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function _reminderRelLabel(isoStr) {
+    if (!isoStr) return '';
+    const target = new Date(isoStr);
+    if (isNaN(target)) return '';
+    const now = new Date();
+    const diffMins = Math.round((target - now) / 60000);
+    if (diffMins < 0) return '⚠️ already in the past';
+    if (diffMins === 0) return 'right now';
+    if (diffMins < 60) return `⏰ in ${diffMins} minute${diffMins === 1 ? '' : 's'}`;
+    const diffH = Math.round(diffMins / 60);
+    const today0 = new Date(); today0.setHours(0,0,0,0);
+    const tgt0 = new Date(target); tgt0.setHours(0,0,0,0);
+    const daysAway = Math.round((tgt0 - today0) / 86400000);
+    const h = target.getHours();
+    if (daysAway === 0) return `⏰ in ${diffH} hour${diffH === 1 ? '' : 's'}`;
+    if (daysAway === 1) {
+        if (h < 10) return '⏰ tomorrow morning';
+        if (h < 12) return '⏰ tomorrow midday';
+        if (h < 17) return '⏰ tomorrow afternoon';
+        return '⏰ tomorrow evening';
+    }
+    return `⏰ in ${daysAway} day${daysAway === 1 ? '' : 's'}`;
+}
+
+function _updateHint() {
+    const input = document.getElementById('reminderTime');
+    const hint  = document.getElementById('reminderHint');
+    const label = _reminderRelLabel(input.value);
+    hint.textContent = label;
+    hint.className = label.startsWith('⚠️') ? 'past' : '';
+}
+
+document.getElementById('reminderTime').addEventListener('input', _updateHint);
+_updateHint(); // run on load if a value is already set
+
 function setPreset(preset) {
     const input = document.getElementById('reminderTime');
     if (!ITEM_DATE) { alert('No date set on this item — enter a date first.'); return; }
@@ -339,11 +385,12 @@ function setPreset(preset) {
     } else if (preset === '1hour') {
         d = _parseItemDatetime(-1);
     }
-    if (d) input.value = _toLocalISO(d);
+    if (d) { input.value = _toLocalISO(d); _updateHint(); }
 }
 
 function clearReminder() {
     document.getElementById('reminderTime').value = '';
+    _updateHint();
 }
 </script>
 </body>

@@ -498,12 +498,10 @@
                     </span>
                     <span class="upcoming-info">
                         <span class="upcoming-name">{{ row.title or "Untitled" }}</span>
-                        <span class="upcoming-when">
-                            {% if row.start_date == today_str %}Today{% else %}Tomorrow{% endif %}
-                            {% if row.time %} · {{ row.time }}{% endif %}
-                            {% if row.type == 'task' and row.priority %}
-                                · <span class="upcoming-priority priority-{{ row.priority }}">{{ row.priority }}</span>
-                            {% endif %}
+                        <span class="upcoming-when"
+                              data-date="{{ row.start_date }}"
+                              data-time="{{ row.time or '' }}">
+                            <span class="upcoming-rel">{% if row.start_date == today_str %}Today{% else %}Tomorrow{% endif %}</span>{% if row.time %} · <span class="upcoming-exact">{{ row.time }}</span>{% endif %}{% if row.type == 'task' and row.priority %} · <span class="upcoming-priority priority-{{ row.priority }}">{{ row.priority }}</span>{% endif %}
                         </span>
                     </span>
                     <span class="upcoming-arrow">›</span>
@@ -630,6 +628,48 @@
         textForm.addEventListener('submit', () => {
             textSubmitBtn.classList.add('loading');
             textSubmitBtn.disabled = true;
+        });
+
+        // ── Relative time for upcoming items ──
+        function relativeTime(dateStr, timeStr) {
+            if (!dateStr) return null;
+            let h = 0, m = 0;
+            if (timeStr) {
+                const mt = timeStr.match(/(\d{1,2}):?(\d{2})?\s*(AM|PM)?/i);
+                if (mt) {
+                    h = parseInt(mt[1]);
+                    m = mt[2] ? parseInt(mt[2]) : 0;
+                    const p = mt[3] ? mt[3].toUpperCase() : null;
+                    if (p === 'PM' && h !== 12) h += 12;
+                    if (p === 'AM' && h === 12) h = 0;
+                }
+            }
+            const target = new Date(`${dateStr}T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`);
+            const now = new Date();
+            const diffMins = Math.round((target - now) / 60000);
+
+            if (diffMins > -60 && diffMins <= 0) return 'just now';
+            if (diffMins < 0) return null;
+            if (diffMins < 60) return `in ${diffMins} min${diffMins === 1 ? '' : 's'}`;
+
+            const diffH = Math.round(diffMins / 60);
+            const today0 = new Date(); today0.setHours(0,0,0,0);
+            const tgt0 = new Date(target); tgt0.setHours(0,0,0,0);
+            const daysAway = Math.round((tgt0 - today0) / 86400000);
+
+            if (daysAway === 0) return `in ${diffH} hour${diffH === 1 ? '' : 's'}`;
+            if (daysAway === 1) {
+                if (h < 10) return 'tomorrow morning';
+                if (h < 12) return 'tomorrow midday';
+                if (h < 17) return 'tomorrow afternoon';
+                return 'tomorrow evening';
+            }
+            return null;
+        }
+
+        document.querySelectorAll('.upcoming-when[data-date]').forEach(el => {
+            const rel = relativeTime(el.dataset.date, el.dataset.time);
+            if (rel) el.querySelector('.upcoming-rel').textContent = rel;
         });
     </script>
 </body>
