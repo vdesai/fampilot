@@ -152,6 +152,23 @@
         }
         .btn-delete:hover { background: rgba(220,53,69,0.35); }
 
+        .reminder-group { margin-top: 8px; padding-top: 18px; border-top: 2px solid #f0f0f0; }
+
+        .preset-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+        .preset {
+            padding: 5px 12px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 6px;
+            background: #f8f9ff;
+            font-size: 12px;
+            font-weight: 600;
+            color: #667eea;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+        .preset:hover { background: #eef0ff; border-color: #667eea; }
+
         @media (max-width: 600px) {
             .two-col { grid-template-columns: 1fr; }
             .form-body { padding: 20px; }
@@ -249,6 +266,19 @@
                 </div>
                 {% endif %}
 
+                <!-- ── REMINDER TIME (all types) ── -->
+                <div class="form-group reminder-group">
+                    <label class="common-label">🔔 Remind me at</label>
+                    <input type="datetime-local" name="reminder_time" id="reminderTime"
+                           value="{{ row.reminder_time[:16] if row.reminder_time else '' }}">
+                    <div class="preset-btns">
+                        <button type="button" class="preset" onclick="setPreset('day-of')">Day of (9 AM)</button>
+                        <button type="button" class="preset" onclick="setPreset('1day')">1 day before</button>
+                        <button type="button" class="preset" onclick="setPreset('1hour')">1 hour before</button>
+                        <button type="button" class="preset" onclick="clearReminder()">Clear</button>
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     <button type="submit" class="btn btn-save">💾 Save Changes</button>
                     <a href="/history/{{ item_id }}" class="btn btn-cancel">Cancel</a>
@@ -268,5 +298,53 @@
     </div>
 
 </div>
+<script>
+// item's date (start_date for events; start_date col = due_date for tasks)
+const ITEM_DATE = "{{ row.start_date or '' }}";
+const ITEM_TIME = "{{ row.time or '' }}";
+
+function _parseItemDatetime(offsetHours) {
+    if (!ITEM_DATE) return null;
+    // Try to parse time string like "7:00 PM" or "19:00"
+    let hours = 9, minutes = 0;
+    if (ITEM_TIME) {
+        const m = ITEM_TIME.match(/(\d{1,2}):?(\d{2})?\s*(AM|PM)?/i);
+        if (m) {
+            hours = parseInt(m[1]);
+            minutes = m[2] ? parseInt(m[2]) : 0;
+            if (m[3] && m[3].toUpperCase() === 'PM' && hours !== 12) hours += 12;
+            if (m[3] && m[3].toUpperCase() === 'AM' && hours === 12) hours = 0;
+        }
+    }
+    const d = new Date(`${ITEM_DATE}T${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:00`);
+    d.setHours(d.getHours() + offsetHours);
+    return d;
+}
+
+function _toLocalISO(d) {
+    if (!d) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function setPreset(preset) {
+    const input = document.getElementById('reminderTime');
+    if (!ITEM_DATE) { alert('No date set on this item — enter a date first.'); return; }
+    let d;
+    if (preset === 'day-of') {
+        d = new Date(`${ITEM_DATE}T09:00:00`);
+    } else if (preset === '1day') {
+        d = new Date(`${ITEM_DATE}T09:00:00`);
+        d.setDate(d.getDate() - 1);
+    } else if (preset === '1hour') {
+        d = _parseItemDatetime(-1);
+    }
+    if (d) input.value = _toLocalISO(d);
+}
+
+function clearReminder() {
+    document.getElementById('reminderTime').value = '';
+}
+</script>
 </body>
 </html>

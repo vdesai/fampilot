@@ -4,9 +4,11 @@ FamPilot Web Interface
 FastAPI backend for event extraction from images
 """
 
+import asyncio
 import os
 import json
 import re
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Dict, Tuple
@@ -31,8 +33,31 @@ from main import (
     TESSERACT_AVAILABLE
 )
 
+async def _reminder_checker():
+    """Background task: poll every 60 s, log due reminders to stdout."""
+    while True:
+        await asyncio.sleep(60)
+        try:
+            for row in db.get_due_reminders():
+                print(
+                    f"[🔔 REMINDER] {(row['type'] or 'item').upper()}: "
+                    f"{row['title']} — was due at {row['reminder_time']}",
+                    flush=True,
+                )
+                db.mark_reminder_sent(row["id"])
+        except Exception as exc:
+            print(f"[REMINDER ERROR] {exc}", flush=True)
+
+
+@asynccontextmanager
+async def lifespan(app: "FastAPI"):
+    task = asyncio.create_task(_reminder_checker())
+    yield
+    task.cancel()
+
+
 # Initialize FastAPI app
-app = FastAPI(title="FamPilot Event Assistant")
+app = FastAPI(title="FamPilot Event Assistant", lifespan=lifespan)
 
 # Setup templates
 templates = Jinja2Templates(directory="templates")
@@ -177,8 +202,14 @@ def generate_google_calendar_url(event: Dict[str, Optional[str]]) -> str:
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    """Render the home page with upload form."""
-    return templates.TemplateResponse(request, "index.html", {"request": request, "nav_page": "home"})
+    """Render the home page with upload form and upcoming items."""
+    from datetime import date
+    return templates.TemplateResponse(request, "index.html", {
+        "request":   request,
+        "nav_page":  "home",
+        "upcoming":  db.get_upcoming_items(),
+        "today_str": date.today().isoformat(),
+    })
 
 
 @app.post("/upload")
@@ -506,21 +537,31 @@ async def update_item(
     notes: str = Form(None),
     priority: str = Form(None),
     remind_at: str = Form(None),
+    reminder_time: str = Form(None),
 ):
     """Persist edits to a saved item and redirect to its detail page."""
     row = db.get_item(item_id)
     if not row:
         return RedirectResponse(url="/history", status_code=303)
 
+    # Convert datetime-local value (YYYY-MM-DDTHH:MM) to UTC ISO string
+    reminder_time_iso = None
+    if reminder_time:
+        try:
+            reminder_time_iso = datetime.fromisoformat(reminder_time).isoformat()
+        except ValueError:
+            reminder_time_iso = None
+
     fields = {
-        "title":      title or None,
-        "start_date": start_date or None,
-        "end_date":   end_date or None,
-        "time":       time or None,
-        "location":   location or None,
-        "notes":      notes or None,
-        "priority":   priority or None,
-        "remind_at":  remind_at or None,
+        "title":         title or None,
+        "start_date":    start_date or None,
+        "end_date":      end_date or None,
+        "time":          time or None,
+        "location":      location or None,
+        "notes":         notes or None,
+        "priority":      priority or None,
+        "remind_at":     remind_at or None,
+        "reminder_time": reminder_time_iso,
     }
     db.update_item(item_id, row["type"], fields)
     # Also update in-memory store if present

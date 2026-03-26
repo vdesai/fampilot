@@ -31,9 +31,17 @@ CREATE TABLE IF NOT EXISTS items (
     priority            TEXT,
     remind_at           TEXT,
     original_input_text TEXT,
-    uploaded_image_path TEXT
+    uploaded_image_path TEXT,
+    reminder_time       TEXT,
+    reminder_sent       INTEGER DEFAULT 0
 )
 """
+
+# Columns added after initial release — ALTER TABLE is idempotent via try/except
+_MIGRATIONS = [
+    ("reminder_time", "TEXT"),
+    ("reminder_sent", "INTEGER DEFAULT 0"),
+]
 
 
 def _conn() -> sqlite3.Connection:
@@ -43,9 +51,14 @@ def _conn() -> sqlite3.Connection:
 
 
 def init_db() -> None:
-    """Create tables if they don't exist. Safe to call multiple times."""
+    """Create tables and run column migrations. Safe to call multiple times."""
     with _conn() as con:
         con.execute(_CREATE_TABLE)
+        for col, defn in _MIGRATIONS:
+            try:
+                con.execute(f"ALTER TABLE items ADD COLUMN {col} {defn}")
+            except sqlite3.OperationalError:
+                pass  # column already exists
         con.commit()
 
 
@@ -119,13 +132,13 @@ def update_event_data(item_id: str, data: dict) -> None:
 
 def update_item(item_id: str, rtype: str, fields: dict) -> None:
     """Persist edited fields for any item type."""
-    # Tasks store due_date in start_date column
     start_date = fields.get("start_date") or fields.get("due_date")
     with _conn() as con:
         con.execute(
             """UPDATE items
                SET title=?, start_date=?, end_date=?, time=?,
-                   location=?, notes=?, priority=?, remind_at=?
+                   location=?, notes=?, priority=?, remind_at=?,
+                   reminder_time=?, reminder_sent=0
                WHERE id=?""",
             (
                 fields.get("title"),
@@ -136,10 +149,45 @@ def update_item(item_id: str, rtype: str, fields: dict) -> None:
                 fields.get("notes"),
                 fields.get("priority"),
                 fields.get("remind_at"),
+                fields.get("reminder_time") or None,
                 item_id,
             ),
         )
         con.commit()
+
+
+def get_due_reminders() -> list:
+    """Items whose reminder_time has passed and haven't been notified yet."""
+    now = datetime.now(timezone.utc).isoformat()
+    with _conn() as con:
+        return con.execute(
+            """SELECT * FROM items
+               WHERE reminder_time IS NOT NULL
+                 AND reminder_time <= ?
+                 AND (reminder_sent IS NULL OR reminder_sent = 0)""",
+            (now,),
+        ).fetchall()
+
+
+def mark_reminder_sent(item_id: str) -> None:
+    with _conn() as con:
+        con.execute("UPDATE items SET reminder_sent=1 WHERE id=?", (item_id,))
+        con.commit()
+
+
+def get_upcoming_items() -> list:
+    """Events and tasks with start_date today or tomorrow, ordered by date+time."""
+    from datetime import date, timedelta
+    today     = date.today().isoformat()
+    tomorrow  = (date.today() + timedelta(days=1)).isoformat()
+    with _conn() as con:
+        return con.execute(
+            """SELECT * FROM items
+               WHERE start_date IN (?, ?)
+                 AND type IN ('event', 'task')
+               ORDER BY start_date, time""",
+            (today, tomorrow),
+        ).fetchall()
 
 
 def delete_item(item_id: str) -> None:

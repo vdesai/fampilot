@@ -335,6 +335,58 @@
             flex: 1;
         }
 
+        /* ── Coming up section ── */
+        .upcoming-section {
+            background: rgba(255,255,255,0.12);
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 18px;
+            backdrop-filter: blur(6px);
+        }
+        .upcoming-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.7);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 10px;
+        }
+        .upcoming-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 10px;
+            border-radius: 9px;
+            text-decoration: none;
+            transition: background 0.15s;
+            margin-bottom: 4px;
+        }
+        .upcoming-item:last-child { margin-bottom: 0; }
+        .upcoming-item:hover { background: rgba(255,255,255,0.15); }
+        .upcoming-icon { font-size: 17px; flex-shrink: 0; }
+        .upcoming-info { flex: 1; min-width: 0; }
+        .upcoming-name {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .upcoming-when {
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+        }
+        .upcoming-priority {
+            font-weight: 700;
+            text-transform: capitalize;
+        }
+        .priority-high   { color: #ff8a94; }
+        .priority-medium { color: #ffd580; }
+        .priority-low    { color: #90ee90; }
+        .upcoming-arrow { color: rgba(255,255,255,0.4); font-size: 16px; }
+
         /* Footer */
         .footer {
             text-align: center;
@@ -373,6 +425,35 @@
             <h1>FamPilot</h1>
             <p>Turn any photo into a calendar event in seconds</p>
         </div>
+
+        <!-- Coming up section -->
+        {% if upcoming %}
+        <div class="upcoming-section">
+            <div class="upcoming-title">📅 Coming up</div>
+            {% set today = [] %}
+            {% set tomorrow_items = [] %}
+            {% for row in upcoming %}
+                {% if loop.index <= 5 %}
+                <a href="/history/{{ row.id }}" class="upcoming-item">
+                    <span class="upcoming-icon">
+                        {% if row.type == 'event' %}📅{% elif row.type == 'task' %}✅{% else %}🔔{% endif %}
+                    </span>
+                    <span class="upcoming-info">
+                        <span class="upcoming-name">{{ row.title or "Untitled" }}</span>
+                        <span class="upcoming-when">
+                            {% if row.start_date == today_str %}Today{% else %}Tomorrow{% endif %}
+                            {% if row.time %} · {{ row.time }}{% endif %}
+                            {% if row.type == 'task' and row.priority %}
+                                · <span class="upcoming-priority priority-{{ row.priority }}">{{ row.priority }}</span>
+                            {% endif %}
+                        </span>
+                    </span>
+                    <span class="upcoming-arrow">›</span>
+                </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
 
         <!-- Main Card -->
         <div class="card">
