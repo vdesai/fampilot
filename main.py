@@ -188,7 +188,13 @@ CRITICAL: Return ONLY the raw JSON object. No markdown, no code blocks, no expla
 # AI CLASSIFICATION & EXTRACTION
 # ============================================================================
 
-CLASSIFY_PROMPT = """Analyze the input and classify it as one of: event, task, or reminder.
+def _classify_prompt() -> str:
+    today = datetime.now()
+    date_line = f'Today is {today.strftime("%A, %B %d, %Y")} (ISO: {today.strftime("%Y-%m-%d")}).'
+    return date_line + """
+Use this to resolve relative dates like "this Friday", "next Monday", "tomorrow", or bare month/day references (assume the nearest future occurrence).
+
+Analyze the input and classify it as one of: event, task, or reminder.
 
 Return ONLY raw JSON in this exact format:
 {
@@ -223,7 +229,7 @@ def classify_and_extract(text: str, api_key: str) -> Dict:
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=1024,
-        messages=[{"role": "user", "content": f"{CLASSIFY_PROMPT}\n\nText:\n{text}"}]
+        messages=[{"role": "user", "content": f"{_classify_prompt()}\n\nText:\n{text}"}]
     )
 
     cleaned = clean_json_response(message.content[0].text)
@@ -289,7 +295,7 @@ def classify_and_extract_from_image(image_path: str, api_key: str) -> Dict:
             "role": "user",
             "content": [
                 {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
-                {"type": "text", "text": CLASSIFY_PROMPT}
+                {"type": "text", "text": _classify_prompt()}
             ]
         }]
     )
