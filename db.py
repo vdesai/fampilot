@@ -39,8 +39,9 @@ CREATE TABLE IF NOT EXISTS items (
 
 # Columns added after initial release — ALTER TABLE is idempotent via try/except
 _MIGRATIONS = [
-    ("reminder_time", "TEXT"),
-    ("reminder_sent", "INTEGER DEFAULT 0"),
+    ("reminder_time",        "TEXT"),
+    ("reminder_sent",        "INTEGER DEFAULT 0"),
+    ("reminder_triggered_at","TEXT"),
 ]
 
 
@@ -170,8 +171,34 @@ def get_due_reminders() -> list:
 
 
 def mark_reminder_sent(item_id: str) -> None:
+    now = datetime.now(timezone.utc).isoformat()
     with _conn() as con:
-        con.execute("UPDATE items SET reminder_sent=1 WHERE id=?", (item_id,))
+        con.execute(
+            "UPDATE items SET reminder_sent=1, reminder_triggered_at=? WHERE id=?",
+            (now, item_id),
+        )
+        con.commit()
+
+
+def get_recent_reminders(hours: int = 6) -> list:
+    """Items triggered within the last N hours and not yet dismissed."""
+    from datetime import timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    with _conn() as con:
+        return con.execute(
+            """SELECT * FROM items
+               WHERE reminder_triggered_at IS NOT NULL
+                 AND reminder_triggered_at >= ?
+                 AND (reminder_sent IS NULL OR reminder_sent != 2)
+               ORDER BY reminder_triggered_at DESC""",
+            (cutoff,),
+        ).fetchall()
+
+
+def dismiss_reminder(item_id: str) -> None:
+    """Mark a triggered reminder as dismissed (reminder_sent=2)."""
+    with _conn() as con:
+        con.execute("UPDATE items SET reminder_sent=2 WHERE id=?", (item_id,))
         con.commit()
 
 

@@ -205,11 +205,19 @@ async def home(request: Request):
     """Render the home page with upload form and upcoming items."""
     from datetime import date
     return templates.TemplateResponse(request, "index.html", {
-        "request":   request,
-        "nav_page":  "home",
-        "upcoming":  db.get_upcoming_items(),
-        "today_str": date.today().isoformat(),
+        "request":            request,
+        "nav_page":           "home",
+        "upcoming":           db.get_upcoming_items(),
+        "today_str":          date.today().isoformat(),
+        "triggered_reminders": db.get_recent_reminders(),
     })
+
+
+@app.post("/dismiss-reminder/{item_id}")
+async def dismiss_reminder(item_id: str):
+    """Dismiss a triggered reminder banner."""
+    db.dismiss_reminder(item_id)
+    return RedirectResponse(url="/", status_code=303)
 
 
 @app.post("/upload")
