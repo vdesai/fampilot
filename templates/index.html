@@ -347,7 +347,30 @@
             gap: 10px;
             backdrop-filter: blur(6px);
             animation: slideDown 0.35s ease-out;
+            position: relative;
+            overflow: hidden;
+            transition: opacity 0.4s ease, transform 0.4s ease, margin 0.4s ease, padding 0.4s ease, max-height 0.4s ease;
+            max-height: 80px;
         }
+        .reminder-banner.dismissing {
+            opacity: 0;
+            transform: translateY(-6px);
+            max-height: 0;
+            margin-bottom: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        /* Countdown progress bar */
+        .reminder-banner::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: rgba(255, 220, 80, 0.65);
+            animation: bannerCountdown var(--banner-duration, 7s) linear forwards;
+        }
+        @keyframes bannerCountdown { from { width: 100%; } to { width: 0; } }
         .reminder-banner-icon { font-size: 20px; flex-shrink: 0; }
         .reminder-banner-text {
             flex: 1;
@@ -472,15 +495,13 @@
 
         <!-- Triggered reminder banners -->
         {% for rem in triggered_reminders %}
-        <div class="reminder-banner" id="rem-{{ rem.id }}">
+        <div class="reminder-banner" id="rem-{{ rem.id }}" data-id="{{ rem.id }}" style="--banner-duration: 8s;">
             <span class="reminder-banner-icon">🔔</span>
             <div class="reminder-banner-text">
                 {{ rem.title or "Reminder" }}
                 <span>Reminder triggered · <a href="/history/{{ rem.id }}" style="color:rgba(255,255,255,0.75);">view item</a></span>
             </div>
-            <form action="/dismiss-reminder/{{ rem.id }}" method="post" style="display:inline;">
-                <button type="submit" class="reminder-dismiss" title="Dismiss">×</button>
-            </form>
+            <button type="button" class="reminder-dismiss" title="Dismiss" onclick="dismissBanner(this.closest('.reminder-banner'))">×</button>
         </div>
         {% endfor %}
 
@@ -670,6 +691,25 @@
         document.querySelectorAll('.upcoming-when[data-date]').forEach(el => {
             const rel = relativeTime(el.dataset.date, el.dataset.time);
             if (rel) el.querySelector('.upcoming-rel').textContent = rel;
+        });
+
+        // ── Reminder banner auto-dismiss ──
+        function dismissBanner(el) {
+            if (!el || el.classList.contains('dismissing')) return;
+            el.classList.add('dismissing');
+            fetch(`/dismiss-reminder/${el.dataset.id}`, { method: 'POST' });
+            setTimeout(() => el.remove(), 420);
+        }
+
+        document.querySelectorAll('.reminder-banner[data-id]').forEach(banner => {
+            const duration = parseFloat(getComputedStyle(banner).getPropertyValue('--banner-duration')) * 1000 || 8000;
+            const timer = setTimeout(() => dismissBanner(banner), duration);
+            // Pause countdown on hover
+            banner.addEventListener('mouseenter', () => {
+                clearTimeout(timer);
+                banner.style.setProperty('animation-play-state', 'paused');
+                banner.style.setProperty('--banner-duration', '0s'); // freeze bar
+            });
         });
     </script>
 </body>
