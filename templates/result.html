@@ -419,10 +419,28 @@
             {% endif %}
 
             {% else %}
-            <!-- Task / Reminder — just a back button -->
+            <!-- Task / Reminder actions -->
             <div class="button-group" style="grid-template-columns: 1fr;">
                 <a href="/" class="button btn-edit">+ Analyze Another</a>
             </div>
+
+            {% if calendar_url %}
+            <div class="quick-add-section">
+                {% if rtype == "task" %}
+                    <div class="quick-add-title">📅 Add due date to Calendar</div>
+                    <div class="quick-add-desc">Creates a calendar entry so you get notified.</div>
+                    <a href="{{ calendar_url }}" target="_blank" class="button btn-calendar-quick">
+                        📅 Add Task to Google Calendar
+                    </a>
+                {% else %}
+                    <div class="quick-add-title">🔔 Set this reminder in Calendar</div>
+                    <div class="quick-add-desc">Creates a calendar event — Google will notify you.</div>
+                    <a href="{{ calendar_url }}" target="_blank" class="button btn-calendar-quick">
+                        🔔 Set Reminder in Google Calendar
+                    </a>
+                {% endif %}
+            </div>
+            {% endif %}
             {% endif %}
         </div>
     </div>

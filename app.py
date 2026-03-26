@@ -253,6 +253,58 @@ async def process_text(request: Request, text: str = Form(...)):
     return _render_result(request, result, text[:30])
 
 
+def _result_to_calendar_data(result: Dict) -> Optional[Dict]:
+    """Convert any result type into a calendar-compatible data dict, or None if no date available."""
+    rtype = result.get("type")
+    data = result.get("data", {})
+
+    if rtype == "event":
+        return data
+
+    if rtype == "task":
+        due = data.get("due_date")
+        if not due:
+            return None
+        notes = data.get("notes") or ""
+        priority = data.get("priority") or "medium"
+        return {
+            "title": data.get("title", "Task"),
+            "start_date": due,
+            "end_date": None,
+            "time": "9:00 AM",
+            "location": None,
+            "_description": f"Priority: {priority}" + (f"\n{notes}" if notes else ""),
+        }
+
+    if rtype == "reminder":
+        remind_at = data.get("remind_at") or ""
+        # Try to extract a date from remind_at; fall back to today
+        from datetime import date
+        remind_date = date.today().strftime("%Y-%m-%d")
+        remind_time = "8:00 AM"
+
+        # Simple heuristic: if remind_at contains a date-like string already parsed, use it
+        import re
+        date_match = re.search(r'\d{4}-\d{2}-\d{2}', remind_at)
+        if date_match:
+            remind_date = date_match.group()
+        time_match = re.search(r'\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)', remind_at)
+        if time_match:
+            remind_time = time_match.group()
+
+        notes = data.get("notes") or ""
+        return {
+            "title": data.get("title", "Reminder"),
+            "start_date": remind_date,
+            "end_date": None,
+            "time": remind_time,
+            "location": None,
+            "_description": f"Reminder: {remind_at}" + (f"\n{notes}" if notes else ""),
+        }
+
+    return None
+
+
 def _render_result(request: Request, result: Dict, source_name: str):
     """Build template context from a classified result and render result.html."""
     item_id = str(hash(source_name))
@@ -264,9 +316,9 @@ def _render_result(request: Request, result: Dict, source_name: str):
         "item_id": item_id,
     }
 
-    # Generate calendar URL only for events
-    if result.get("type") == "event":
-        context["calendar_url"] = generate_google_calendar_url(result.get("data", {}))
+    cal_data = _result_to_calendar_data(result)
+    if cal_data:
+        context["calendar_url"] = generate_google_calendar_url(cal_data)
 
     return templates.TemplateResponse(request, "result.html", context)
 
