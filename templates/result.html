@@ -18,9 +18,9 @@
 
         .header { text-align: center; margin-bottom: 30px; }
         .header h1 { font-size: 28px; color: white; margin-bottom: 8px; font-weight: 600; }
-        .header p { color: rgba(255,255,255,0.9); font-size: 16px; }
+        .header p  { color: rgba(255,255,255,0.9); font-size: 16px; }
 
-        /* Type badge */
+        /* ── Type badge row ── */
         .type-badge-row {
             display: flex;
             align-items: center;
@@ -39,17 +39,60 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .type-badge.event  { background: #e8f5e9; color: #2e7d32; }
-        .type-badge.task   { background: #fff3e0; color: #e65100; }
+        .type-badge.event    { background: #e8f5e9; color: #2e7d32; }
+        .type-badge.task     { background: #fff3e0; color: #e65100; }
         .type-badge.reminder { background: #e3f2fd; color: #1565c0; }
 
-        .confidence {
-            font-size: 13px;
-            color: rgba(255,255,255,0.85);
-            font-weight: 500;
-        }
+        .confidence { font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 500; }
 
-        /* Reasoning */
+        /* ── Low-confidence banner ── */
+        .review-banner {
+            background: white;
+            border-radius: 14px;
+            padding: 22px 26px;
+            margin-bottom: 20px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+            animation: fadeInUp 0.4s ease-out;
+        }
+        .review-banner-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        .review-banner-sub {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 18px;
+        }
+        .type-picker {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+        .type-btn {
+            padding: 14px 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            background: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: #555;
+        }
+        .type-btn .type-btn-icon { font-size: 22px; }
+        .type-btn:hover                { border-color: #667eea; color: #667eea; background: #f8f9ff; }
+        .type-btn.current-event        { border-color: #43a047; color: #2e7d32; background: #e8f5e9; }
+        .type-btn.current-task         { border-color: #fb8c00; color: #e65100; background: #fff3e0; }
+        .type-btn.current-reminder     { border-color: #1e88e5; color: #1565c0; background: #e3f2fd; }
+
+        /* ── Reasoning box ── */
         .reasoning-box {
             background: rgba(255,255,255,0.15);
             border-radius: 10px;
@@ -59,52 +102,51 @@
             font-size: 14px;
             line-height: 1.5;
         }
-        .reasoning-box strong { display: block; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
+        .reasoning-box strong { display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.75; }
 
-        /* Message */
+        /* ── Messages ── */
         .message {
             background: white;
-            padding: 16px 20px;
+            padding: 14px 18px;
             border-radius: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             animation: slideDown 0.4s ease-out;
+            font-weight: 500;
+            font-size: 14px;
         }
-        @keyframes slideDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
-        .message.success { background: linear-gradient(135deg, #d4edda, #c3e6cb); color: #155724; }
-        .message.error   { background: linear-gradient(135deg, #f8d7da, #f5c6cb); color: #721c24; }
+        @keyframes slideDown { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeInUp  { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        .message.success { background: linear-gradient(135deg,#d4edda,#c3e6cb); color: #155724; }
+        .message.error   { background: linear-gradient(135deg,#f8d7da,#f5c6cb); color: #721c24; }
 
-        /* Card */
+        /* ── Result card ── */
         .card {
             background: white;
             border-radius: 16px;
             box-shadow: 0 8px 30px rgba(0,0,0,0.12);
             overflow: hidden;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             animation: fadeInUp 0.5s ease-out;
         }
-        @keyframes fadeInUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        .card.dimmed { opacity: 0.6; pointer-events: none; }
 
-        .card-header {
-            padding: 25px 30px;
-            color: white;
-        }
-        .card-header.event    { background: linear-gradient(135deg, #43a047, #1b5e20); }
-        .card-header.task     { background: linear-gradient(135deg, #fb8c00, #bf360c); }
-        .card-header.reminder { background: linear-gradient(135deg, #1e88e5, #0d47a1); }
+        .card-header { padding: 24px 28px; color: white; }
+        .card-header.event    { background: linear-gradient(135deg,#43a047,#1b5e20); }
+        .card-header.task     { background: linear-gradient(135deg,#fb8c00,#bf360c); }
+        .card-header.reminder { background: linear-gradient(135deg,#1e88e5,#0d47a1); }
+        .card-header h2       { font-size: 21px; font-weight: 600; margin-bottom: 3px; }
+        .card-header .subtitle { font-size: 13px; opacity: 0.85; }
 
-        .card-header h2 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
-        .card-header .subtitle { font-size: 14px; opacity: 0.85; }
+        .card-body { padding: 24px 28px; }
+        .field-grid { display: grid; gap: 12px; }
 
-        .card-body { padding: 25px 30px; }
-
-        .field-grid { display: grid; gap: 14px; }
         .field-card {
             background: #f8f9ff;
             border-radius: 10px;
-            padding: 16px 18px;
+            padding: 14px 16px;
             border-left: 4px solid #667eea;
         }
         .field-card.task-card     { border-left-color: #fb8c00; }
@@ -113,86 +155,103 @@
         .field-label {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 12px;
+            gap: 5px;
+            font-size: 11px;
             font-weight: 700;
             color: #667eea;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         .field-label.task     { color: #fb8c00; }
         .field-label.reminder { color: #1e88e5; }
 
-        .field-value { font-size: 17px; color: #333; font-weight: 500; }
-        .field-value.large { font-size: 19px; font-weight: 600; }
+        .field-value       { font-size: 16px; color: #333; font-weight: 500; }
+        .field-value.large { font-size: 18px; font-weight: 600; }
 
-        .priority-badge {
-            display: inline-block;
-            padding: 3px 12px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-        .priority-high   { background: #ffebee; color: #c62828; }
-        .priority-medium { background: #fff3e0; color: #e65100; }
-        .priority-low    { background: #e8f5e9; color: #2e7d32; }
+        .priority-badge { display:inline-block; padding:3px 12px; border-radius:12px; font-size:13px; font-weight:600; }
+        .priority-high   { background:#ffebee; color:#c62828; }
+        .priority-medium { background:#fff3e0; color:#e65100; }
+        .priority-low    { background:#e8f5e9; color:#2e7d32; }
 
-        .date-range { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .date-badge { background: white; padding: 6px 14px; border-radius: 8px; font-weight: 600; color: #43a047; border: 2px solid #43a047; }
-        .date-arrow { color: #999; font-weight: bold; }
+        .date-range { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+        .date-badge { background:white; padding:5px 13px; border-radius:8px; font-weight:600; color:#43a047; border:2px solid #43a047; }
+        .date-arrow { color:#999; font-weight:bold; }
 
-        /* Edit form */
-        .edit-form { display: none; padding: 25px 30px; background: white; }
-        .edit-form.show { display: block; animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-        .edit-form .form-group { margin-bottom: 18px; }
-        .edit-form label { display: block; font-weight: 600; color: #667eea; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-        .edit-form input { width: 100%; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 15px; color: #333; transition: all 0.2s; font-family: inherit; }
-        .edit-form input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+        /* ── Edit form ── */
+        .edit-form { display:none; padding:24px 28px; background:white; }
+        .edit-form.show { display:block; animation:fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+        .edit-form .form-group { margin-bottom:16px; }
+        .edit-form label { display:block; font-weight:600; color:#667eea; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px; }
+        .edit-form input { width:100%; padding:11px 13px; border:2px solid #e0e0e0; border-radius:10px; font-size:15px; color:#333; transition:all 0.2s; font-family:inherit; }
+        .edit-form input:focus { outline:none; border-color:#667eea; box-shadow:0 0 0 3px rgba(102,126,234,0.1); }
 
-        /* Actions */
-        .actions { padding: 0 30px 28px 30px; }
-        .button-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
-        .button-group.edit-buttons { grid-template-columns: 2fr 1fr; }
+        /* ── Action buttons ── */
+        .actions { padding: 0 28px 26px 28px; }
+        .button-group { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px; }
+        .button-group.edit-buttons { grid-template-columns:2fr 1fr; }
+        .button-group.single { grid-template-columns:1fr; }
 
         button, .button {
-            padding: 14px 20px;
-            border: none;
-            border-radius: 10px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            text-decoration: none;
-            font-family: inherit;
+            padding:13px 18px;
+            border:none;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:600;
+            cursor:pointer;
+            transition:all 0.2s;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:7px;
+            text-decoration:none;
+            font-family:inherit;
         }
-        .btn-confirm { background: linear-gradient(135deg, #28a745, #20c997); color: white; box-shadow: 0 4px 12px rgba(40,167,69,0.3); }
-        .btn-confirm:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(40,167,69,0.4); }
-        .btn-edit { background: linear-gradient(135deg, #667eea, #764ba2); color: white; box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
-        .btn-edit:hover { transform: translateY(-2px); }
-        .btn-cancel { background: white; color: #666; border: 2px solid #ddd; }
-        .btn-cancel:hover { background: #f8f9fa; border-color: #999; }
-        .btn-save { background: linear-gradient(135deg, #28a745, #20c997); color: white; }
-        .btn-save:hover { transform: translateY(-2px); }
-        .btn-calendar-quick { background: linear-gradient(135deg, #43a047, #1b5e20); color: white; padding: 16px 28px; font-size: 16px; box-shadow: 0 4px 12px rgba(67,160,71,0.3); }
-        .btn-calendar-quick:hover { transform: translateY(-2px); }
+        .btn-confirm { background:linear-gradient(135deg,#28a745,#20c997); color:white; box-shadow:0 4px 12px rgba(40,167,69,0.3); }
+        .btn-confirm:hover { transform:translateY(-2px); }
+        .btn-edit { background:linear-gradient(135deg,#667eea,#764ba2); color:white; box-shadow:0 4px 12px rgba(102,126,234,0.3); }
+        .btn-edit:hover { transform:translateY(-2px); }
+        .btn-cancel { background:white; color:#666; border:2px solid #ddd; }
+        .btn-cancel:hover { background:#f8f9fa; border-color:#999; }
+        .btn-save { background:linear-gradient(135deg,#28a745,#20c997); color:white; }
+        .btn-save:hover { transform:translateY(-2px); }
+        .btn-analyze { background:linear-gradient(135deg,#667eea,#764ba2); color:white; }
+        .btn-analyze:hover { transform:translateY(-2px); }
+        .btn-calendar-quick { background:linear-gradient(135deg,#43a047,#1b5e20); color:white; padding:15px 26px; font-size:15px; box-shadow:0 4px 12px rgba(67,160,71,0.3); }
+        .btn-calendar-quick:hover { transform:translateY(-2px); }
 
-        .quick-add-section { margin-top: 25px; padding-top: 25px; border-top: 2px solid #f0f0f0; text-align: center; }
-        .quick-add-title { font-size: 16px; font-weight: 700; color: #333; margin-bottom: 6px; }
-        .quick-add-desc { font-size: 13px; color: #999; margin-bottom: 16px; }
+        /* ── Calendar section ── */
+        .quick-add-section { margin-top:22px; padding-top:22px; border-top:2px solid #f0f0f0; text-align:center; }
+        .quick-add-title { font-size:15px; font-weight:700; color:#333; margin-bottom:5px; }
+        .quick-add-desc  { font-size:13px; color:#999; margin-bottom:14px; }
 
-        .back-link { text-align: center; margin-top: 14px; }
-        .back-link a { color: white; text-decoration: none; font-weight: 500; font-size: 15px; opacity: 0.9; }
-        .back-link a:hover { opacity: 1; text-decoration: underline; }
+        /* ── Change type footer ── */
+        .change-type-section {
+            background: white;
+            border-radius: 14px;
+            padding: 18px 22px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+        .change-type-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
 
-        @media (max-width: 600px) {
-            .button-group, .button-group.edit-buttons { grid-template-columns: 1fr; }
-            .card-header, .card-body, .actions { padding: 20px; }
+        /* ── Footer links ── */
+        .back-link { text-align:center; margin-top:12px; }
+        .back-link a { color:white; text-decoration:none; font-weight:500; font-size:14px; opacity:0.9; }
+        .back-link a:hover { opacity:1; text-decoration:underline; }
+
+        @media(max-width:600px) {
+            .button-group, .button-group.edit-buttons { grid-template-columns:1fr; }
+            .type-picker { grid-template-columns:1fr 1fr 1fr; }
+            .card-header, .card-body, .actions { padding:18px; }
         }
     </style>
 </head>
@@ -204,10 +263,7 @@
         <h1>⚠️ Error</h1>
         <p>Something went wrong</p>
     </div>
-    <div class="message error">
-        <span>❌</span>
-        <span>{{ error }}</span>
-    </div>
+    <div class="message error"><span>❌</span><span>{{ error }}</span></div>
     <div class="back-link"><a href="/">← Try again</a></div>
 
 {% elif result %}
@@ -215,14 +271,19 @@
     {% set data  = result.data %}
 
     <div class="header">
-        {% if rtype == "event" %}
+        {% if low_confidence %}
+            <h1>🤔 Not Sure</h1>
+            <p>Help me classify this correctly</p>
+        {% elif rtype == "event" %}
             <h1>📋 Event Detected</h1>
+            <p>Review the details below</p>
         {% elif rtype == "task" %}
             <h1>✅ Task Detected</h1>
+            <p>Review the details below</p>
         {% else %}
             <h1>🔔 Reminder Detected</h1>
+            <p>Review the details below</p>
         {% endif %}
-        <p>Review the details below</p>
     </div>
 
     <!-- Type badge + confidence -->
@@ -235,8 +296,39 @@
         <span class="confidence">{{ (result.confidence * 100) | int }}% confidence</span>
     </div>
 
-    <!-- Reasoning -->
-    {% if result.reasoning %}
+    <!-- Low-confidence review banner (shown first so user acts before seeing card) -->
+    {% if low_confidence %}
+    <div class="review-banner">
+        <div class="review-banner-title">I'm not fully sure what this is.</div>
+        <div class="review-banner-sub">My best guess is shown below — please confirm or correct it.</div>
+        <div class="type-picker">
+            <form action="/reclassify/{{ item_id }}" method="post">
+                <input type="hidden" name="forced_type" value="event">
+                <button type="submit" class="type-btn {% if rtype == 'event' %}current-event{% endif %}" style="width:100%">
+                    <span class="type-btn-icon">📅</span>
+                    <span>Event</span>
+                </button>
+            </form>
+            <form action="/reclassify/{{ item_id }}" method="post">
+                <input type="hidden" name="forced_type" value="task">
+                <button type="submit" class="type-btn {% if rtype == 'task' %}current-task{% endif %}" style="width:100%">
+                    <span class="type-btn-icon">✅</span>
+                    <span>Task</span>
+                </button>
+            </form>
+            <form action="/reclassify/{{ item_id }}" method="post">
+                <input type="hidden" name="forced_type" value="reminder">
+                <button type="submit" class="type-btn {% if rtype == 'reminder' %}current-reminder{% endif %}" style="width:100%">
+                    <span class="type-btn-icon">🔔</span>
+                    <span>Reminder</span>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Reasoning (only for high-confidence results) -->
+    {% if not low_confidence and result.reasoning %}
     <div class="reasoning-box">
         <strong>AI Reasoning</strong>
         {{ result.reasoning }}
@@ -247,8 +339,8 @@
     <div class="message success"><span>✓</span><span>{{ message }}</span></div>
     {% endif %}
 
-    <div class="card">
-        <!-- Card Header -->
+    <!-- Result card (dimmed when low-confidence so banner takes focus) -->
+    <div class="card {% if low_confidence %}dimmed{% endif %}">
         <div class="card-header {{ rtype }}">
             <h2>{{ data.title or "Untitled" }}</h2>
             {% if rtype == "event" and data.start_date %}
@@ -263,19 +355,17 @@
             {% endif %}
         </div>
 
-        <!-- Display Mode -->
+        <!-- Display mode -->
         <div class="card-body" id="displayMode">
             <div class="field-grid">
 
                 {% if rtype == "event" %}
-                    <!-- EVENT fields -->
                     {% if data.title %}
                     <div class="field-card">
                         <div class="field-label">📌 Title</div>
                         <div class="field-value large">{{ data.title }}</div>
                     </div>
                     {% endif %}
-
                     {% if data.start_date %}
                     <div class="field-card">
                         <div class="field-label">📅 Date</div>
@@ -290,14 +380,12 @@
                         {% endif %}
                     </div>
                     {% endif %}
-
                     {% if data.time %}
                     <div class="field-card">
                         <div class="field-label">🕐 Time</div>
                         <div class="field-value">{{ data.time }}</div>
                     </div>
                     {% endif %}
-
                     {% if data.location %}
                     <div class="field-card">
                         <div class="field-label">📍 Location</div>
@@ -306,21 +394,18 @@
                     {% endif %}
 
                 {% elif rtype == "task" %}
-                    <!-- TASK fields -->
                     {% if data.title %}
                     <div class="field-card task-card">
                         <div class="field-label task">✅ Task</div>
                         <div class="field-value large">{{ data.title }}</div>
                     </div>
                     {% endif %}
-
                     {% if data.due_date %}
                     <div class="field-card task-card">
                         <div class="field-label task">📅 Due Date</div>
                         <div class="field-value">{{ data.due_date }}</div>
                     </div>
                     {% endif %}
-
                     {% if data.priority %}
                     <div class="field-card task-card">
                         <div class="field-label task">🎯 Priority</div>
@@ -329,7 +414,6 @@
                         </div>
                     </div>
                     {% endif %}
-
                     {% if data.notes %}
                     <div class="field-card task-card">
                         <div class="field-label task">📝 Notes</div>
@@ -338,21 +422,18 @@
                     {% endif %}
 
                 {% else %}
-                    <!-- REMINDER fields -->
                     {% if data.title %}
                     <div class="field-card reminder-card">
                         <div class="field-label reminder">🔔 Reminder</div>
                         <div class="field-value large">{{ data.title }}</div>
                     </div>
                     {% endif %}
-
                     {% if data.remind_at %}
                     <div class="field-card reminder-card">
                         <div class="field-label reminder">⏰ When</div>
                         <div class="field-value">{{ data.remind_at }}</div>
                     </div>
                     {% endif %}
-
                     {% if data.notes %}
                     <div class="field-card reminder-card">
                         <div class="field-label reminder">📝 Notes</div>
@@ -365,7 +446,7 @@
         </div>
 
         {% if rtype == "event" %}
-        <!-- Edit Form (events only) -->
+        <!-- Edit form -->
         <form id="editForm" class="edit-form" action="/edit/{{ item_id }}" method="post">
             <div class="form-group">
                 <label>📌 Title</label>
@@ -390,10 +471,10 @@
         </form>
         {% endif %}
 
-        <!-- Actions -->
+        <!-- Actions (hidden when low-confidence until user picks a type) -->
+        {% if not low_confidence %}
         <div class="actions">
             {% if rtype == "event" %}
-            <!-- Event action buttons -->
             <div id="actionButtons" class="button-group">
                 <form action="/confirm/{{ item_id }}" method="post" style="display:contents;">
                     <button type="submit" class="btn-confirm">✓ Confirm</button>
@@ -407,22 +488,11 @@
                 <button type="submit" form="editForm" class="btn-save">💾 Save Changes</button>
                 <button type="button" class="btn-cancel" onclick="cancelEdit()">Cancel</button>
             </div>
-
-            {% if calendar_url %}
-            <div class="quick-add-section">
-                <div class="quick-add-title">⚡ Add to your calendar instantly</div>
-                <div class="quick-add-desc">No login required. One click to add.</div>
-                <a href="{{ calendar_url }}" target="_blank" class="button btn-calendar-quick">
-                    📅 Add to Google Calendar
-                </a>
+            {% else %}
+            <div class="button-group single">
+                <a href="/" class="button btn-analyze">+ Analyze Another</a>
             </div>
             {% endif %}
-
-            {% else %}
-            <!-- Task / Reminder actions -->
-            <div class="button-group" style="grid-template-columns: 1fr;">
-                <a href="/" class="button btn-edit">+ Analyze Another</a>
-            </div>
 
             {% if calendar_url %}
             <div class="quick-add-section">
@@ -432,22 +502,57 @@
                     <a href="{{ calendar_url }}" target="_blank" class="button btn-calendar-quick">
                         📅 Add Task to Google Calendar
                     </a>
-                {% else %}
+                {% elif rtype == "reminder" %}
                     <div class="quick-add-title">🔔 Set this reminder in Calendar</div>
                     <div class="quick-add-desc">Creates a calendar event — Google will notify you.</div>
                     <a href="{{ calendar_url }}" target="_blank" class="button btn-calendar-quick">
                         🔔 Set Reminder in Google Calendar
                     </a>
+                {% else %}
+                    <div class="quick-add-title">⚡ Add to your calendar instantly</div>
+                    <div class="quick-add-desc">No login required. One click to add.</div>
+                    <a href="{{ calendar_url }}" target="_blank" class="button btn-calendar-quick">
+                        📅 Add to Google Calendar
+                    </a>
                 {% endif %}
             </div>
             {% endif %}
-            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Change type (always visible for high-confidence results) -->
+    {% if not low_confidence %}
+    <div class="change-type-section">
+        <div class="change-type-label">Detected as {{ rtype }} — not right?</div>
+        <div class="type-picker">
+            <form action="/reclassify/{{ item_id }}" method="post">
+                <input type="hidden" name="forced_type" value="event">
+                <button type="submit" class="type-btn {% if rtype == 'event' %}current-event{% endif %}" style="width:100%">
+                    <span class="type-btn-icon">📅</span>
+                    <span>Event</span>
+                </button>
+            </form>
+            <form action="/reclassify/{{ item_id }}" method="post">
+                <input type="hidden" name="forced_type" value="task">
+                <button type="submit" class="type-btn {% if rtype == 'task' %}current-task{% endif %}" style="width:100%">
+                    <span class="type-btn-icon">✅</span>
+                    <span>Task</span>
+                </button>
+            </form>
+            <form action="/reclassify/{{ item_id }}" method="post">
+                <input type="hidden" name="forced_type" value="reminder">
+                <button type="submit" class="type-btn {% if rtype == 'reminder' %}current-reminder{% endif %}" style="width:100%">
+                    <span class="type-btn-icon">🔔</span>
+                    <span>Reminder</span>
+                </button>
+            </form>
         </div>
     </div>
+    {% endif %}
 
     <div class="back-link"><a href="/">← Back to home</a></div>
 {% endif %}
-
 </div>
 
 <script>

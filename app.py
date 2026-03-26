@@ -305,6 +305,9 @@ def _result_to_calendar_data(result: Dict) -> Optional[Dict]:
     return None
 
 
+CONFIDENCE_THRESHOLD = 0.80
+
+
 def _render_result(request: Request, result: Dict, source_name: str):
     """Build template context from a classified result and render result.html."""
     item_id = str(hash(source_name))
@@ -314,9 +317,43 @@ def _render_result(request: Request, result: Dict, source_name: str):
         "request": request,
         "result": result,
         "item_id": item_id,
+        "low_confidence": result.get("confidence", 1.0) < CONFIDENCE_THRESHOLD,
     }
 
     cal_data = _result_to_calendar_data(result)
+    if cal_data:
+        context["calendar_url"] = generate_google_calendar_url(cal_data)
+
+    return templates.TemplateResponse(request, "result.html", context)
+
+
+@app.post("/reclassify/{item_id}")
+async def reclassify(request: Request, item_id: str, forced_type: str = Form(...)):
+    """User overrides the detected type. Keep existing data, swap the type."""
+    item = items_store.get(item_id)
+    if not item:
+        return templates.TemplateResponse(request, "result.html", {
+            "request": request,
+            "error": "Session expired. Please upload again."
+        })
+
+    updated = {
+        **item,
+        "type": forced_type,
+        "confidence": 1.0,
+        "reasoning": f"Manually set to '{forced_type}' by user.",
+    }
+    items_store[item_id] = updated
+
+    context = {
+        "request": request,
+        "result": updated,
+        "item_id": item_id,
+        "low_confidence": False,
+        "message": f"Type changed to {forced_type}.",
+    }
+
+    cal_data = _result_to_calendar_data(updated)
     if cal_data:
         context["calendar_url"] = generate_google_calendar_url(cal_data)
 
