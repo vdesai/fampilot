@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Items – FamPilot</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container { max-width: 700px; margin: 0 auto; padding: 30px 20px 120px; }
+
+        /* ── Header ── */
+        .header { text-align: center; margin-bottom: 26px; }
+        .header h1 { font-size: 26px; color: white; font-weight: 700; margin-bottom: 6px; }
+        .header p  { color: rgba(255,255,255,0.8); font-size: 14px; }
+
+        /* ── Review card ── */
+        .review-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            margin-bottom: 16px;
+            overflow: hidden;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+        .review-card.excluded {
+            opacity: 0.38;
+            transform: scale(0.985);
+        }
+
+        /* ── Card header strip ── */
+        .card-header {
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-header.event    { background: linear-gradient(135deg, #43a047, #1b5e20); }
+        .card-header.task     { background: linear-gradient(135deg, #fb8c00, #bf360c); }
+        .card-header.reminder { background: linear-gradient(135deg, #1e88e5, #0d47a1); }
+
+        .card-type-icon { font-size: 18px; flex-shrink: 0; }
+
+        .card-type-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: rgba(255,255,255,0.9);
+            background: rgba(255,255,255,0.2);
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+
+        .card-confidence {
+            font-size: 11px;
+            color: rgba(255,255,255,0.65);
+            margin-left: 4px;
+        }
+
+        .card-toggle {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            cursor: pointer;
+            color: rgba(255,255,255,0.85);
+            font-size: 13px;
+            font-weight: 600;
+            user-select: none;
+        }
+        .card-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #4caf50;
+        }
+
+        /* ── Card body ── */
+        .card-body { padding: 20px; }
+
+        .form-group { margin-bottom: 14px; }
+        .form-group:last-child { margin-bottom: 0; }
+
+        label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        label.event-label    { color: #43a047; }
+        label.task-label     { color: #fb8c00; }
+        label.reminder-label { color: #1e88e5; }
+        label.common-label   { color: #667eea; }
+
+        input[type="text"],
+        input[type="date"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px 13px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #333;
+            font-family: inherit;
+            transition: border-color 0.2s;
+            background: white;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        .card-reasoning {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+            font-size: 12px;
+            color: #999;
+            font-style: italic;
+        }
+
+        /* ── Sticky save bar ── */
+        .save-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 14px 20px;
+            background: rgba(80, 50, 160, 0.96);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            z-index: 100;
+        }
+        .save-bar-inner { display: flex; gap: 10px; width: 100%; max-width: 700px; }
+
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-save {
+            flex: 1;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+        .btn-save:hover   { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(40,167,69,0.4); }
+        .btn-save:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-cancel {
+            flex: 0 0 auto;
+            background: rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.85);
+            border: 1.5px solid rgba(255,255,255,0.25);
+        }
+        .btn-cancel:hover { background: rgba(255,255,255,0.22); }
+
+        @media (max-width: 600px) {
+            .two-col { grid-template-columns: 1fr; }
+            .card-body { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+{% include "_nav.html" %}
+
+<div class="container">
+    <div class="header">
+        <h1>🧠 Found {{ total }} Item{{ 's' if total != 1 }}</h1>
+        <p>Review and edit each item, then save the ones you want to keep.</p>
+    </div>
+
+    <form action="/review/{{ batch_id }}/save" method="post" id="reviewForm">
+        <input type="hidden" name="item_count" value="{{ total }}">
+
+        {% for i, item in items %}
+        <div class="review-card" id="card-{{ i }}">
+
+            <div class="card-header {{ item.type }}">
+                <span class="card-type-icon">
+                    {% if item.type == 'event' %}📅{% elif item.type == 'task' %}✅{% else %}🔔{% endif %}
+                </span>
+                <span class="card-type-label">{{ item.type | capitalize }}</span>
+                <span class="card-confidence">{{ (item.confidence * 100) | int }}%</span>
+                <label class="card-toggle">
+                    <input type="checkbox" class="include-cb" name="include_{{ i }}" value="1" checked
+                           onchange="toggleCard({{ i }}, this.checked)">
+                    Keep
+                </label>
+            </div>
+
+            <!-- Hidden metadata -->
+            <input type="hidden" name="type_{{ i }}"       value="{{ item.type }}">
+            <input type="hidden" name="confidence_{{ i }}" value="{{ item.confidence }}">
+            <input type="hidden" name="reasoning_{{ i }}"  value="{{ item.reasoning or '' }}">
+
+            <div class="card-body">
+
+                <!-- Title — always shown -->
+                <div class="form-group">
+                    <label class="common-label">📌 Title</label>
+                    <input type="text" name="title_{{ i }}" value="{{ item.title or '' }}"
+                           required placeholder="Title">
+                </div>
+
+                {% if item.type == 'event' %}
+                <div class="two-col">
+                    <div class="form-group">
+                        <label class="event-label">📅 Start Date</label>
+                        <input type="date" name="start_date_{{ i }}" value="{{ item.start_date or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="event-label">📅 End Date</label>
+                        <input type="date" name="end_date_{{ i }}" value="{{ item.end_date or '' }}">
+                    </div>
+                </div>
+                <div class="two-col">
+                    <div class="form-group">
+                        <label class="event-label">🕐 Time</label>
+                        <input type="text" name="time_{{ i }}" value="{{ item.time or '' }}"
+                               placeholder="e.g. 3:00 PM">
+                    </div>
+                    <div class="form-group">
+                        <label class="event-label">📍 Location</label>
+                        <input type="text" name="location_{{ i }}" value="{{ item.location or '' }}"
+                               placeholder="Venue or address">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="event-label">📝 Notes</label>
+                    <textarea name="notes_{{ i }}" placeholder="Optional notes">{{ item.notes or '' }}</textarea>
+                </div>
+
+                {% elif item.type == 'task' %}
+                <div class="two-col">
+                    <div class="form-group">
+                        <label class="task-label">📅 Due Date</label>
+                        <input type="date" name="start_date_{{ i }}" value="{{ item.start_date or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="task-label">🎯 Priority</label>
+                        <select name="priority_{{ i }}">
+                            <option value="high"   {% if item.priority == 'high' %}selected{% endif %}>High</option>
+                            <option value="medium" {% if item.priority == 'medium' or not item.priority %}selected{% endif %}>Medium</option>
+                            <option value="low"    {% if item.priority == 'low' %}selected{% endif %}>Low</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="task-label">📝 Notes</label>
+                    <textarea name="notes_{{ i }}" placeholder="Optional notes">{{ item.notes or '' }}</textarea>
+                </div>
+
+                {% else %}
+                <!-- reminder -->
+                <div class="form-group">
+                    <label class="reminder-label">⏰ When</label>
+                    <input type="text" name="remind_at_{{ i }}" value="{{ item.remind_at or '' }}"
+                           placeholder="e.g. every morning, 2026-04-01 8:00 AM">
+                </div>
+                <div class="form-group">
+                    <label class="reminder-label">📝 Notes</label>
+                    <textarea name="notes_{{ i }}" placeholder="Optional notes">{{ item.notes or '' }}</textarea>
+                </div>
+                {% endif %}
+
+                {% if item.reasoning %}
+                <p class="card-reasoning">{{ item.reasoning }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </form>
+</div>
+
+<!-- Sticky save bar (outside the scrollable container) -->
+<div class="save-bar">
+    <div class="save-bar-inner">
+        <button type="submit" form="reviewForm" class="btn btn-save" id="saveBtn">
+            💾 Save {{ total }} Item{{ 's' if total != 1 }}
+        </button>
+        <a href="/" class="btn btn-cancel">Discard All</a>
+    </div>
+</div>
+
+<script>
+function toggleCard(i, checked) {
+    document.getElementById(`card-${i}`).classList.toggle('excluded', !checked);
+    updateSaveBtn();
+}
+
+function updateSaveBtn() {
+    const n = document.querySelectorAll('.include-cb:checked').length;
+    const btn = document.getElementById('saveBtn');
+    btn.textContent = n > 0
+        ? `💾 Save ${n} Item${n === 1 ? '' : 's'}`
+        : 'Nothing selected';
+    btn.disabled = n === 0;
+}
+</script>
+</body>
+</html>

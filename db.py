@@ -102,6 +102,39 @@ def save_item(item_id: str, result: dict,
         con.commit()
 
 
+def save_flat_item(item_id: str, flat: dict,
+                   source_text: Optional[str] = None,
+                   image_path: Optional[str] = None) -> None:
+    """Save a flat item dict (from multi-extraction) directly to DB."""
+    with _conn() as con:
+        con.execute(
+            """INSERT OR REPLACE INTO items
+               (id, created_at, type, confidence, reasoning,
+                title, start_date, end_date, time, location,
+                notes, priority, remind_at,
+                original_input_text, uploaded_image_path)
+               VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?, ?,?)""",
+            (
+                item_id,
+                datetime.now(timezone.utc).isoformat(),
+                flat.get("type"),
+                flat.get("confidence"),
+                flat.get("reasoning"),
+                flat.get("title"),
+                flat.get("start_date"),
+                flat.get("end_date"),
+                flat.get("time"),
+                flat.get("location"),
+                flat.get("notes"),
+                flat.get("priority"),
+                flat.get("remind_at"),
+                source_text,
+                image_path,
+            ),
+        )
+        con.commit()
+
+
 def update_type(item_id: str, new_type: str) -> None:
     """Update just the type + clear confidence/reasoning after user override."""
     with _conn() as con:

@@ -188,6 +188,44 @@ CRITICAL: Return ONLY the raw JSON object. No markdown, no code blocks, no expla
 # AI CLASSIFICATION & EXTRACTION
 # ============================================================================
 
+def _multi_classify_prompt() -> str:
+    today = datetime.now()
+    date_line = f'Today is {today.strftime("%A, %B %d, %Y")} (ISO: {today.strftime("%Y-%m-%d")}).'
+    return date_line + """
+Use this to resolve relative dates ("this Friday", "next Monday", "tomorrow", bare month/day — assume nearest future occurrence).
+
+You are a smart family assistant. Extract ALL actionable items from the input.
+
+Return ONLY a raw JSON array. Each element = one actionable item.
+
+Examples:
+- "School trip on Friday, bring lunch, pay $20" → 3 items: 1 event + 2 tasks
+- "Doctor appointment tomorrow at 3 PM, bring insurance card" → 2 items: 1 event + 1 task
+
+Classification:
+- event: something happening at a specific time/place (appointment, party, meeting, trip)
+- task: something that needs to be done (bring, buy, pay, call, pick up, fill out)
+- reminder: something to remember / a recurring note
+
+Each object must have this exact shape (use null for fields that don't apply):
+{
+  "type": "event" | "task" | "reminder",
+  "confidence": 0.0-1.0,
+  "reasoning": "brief reason",
+  "title": "string",
+  "start_date": "YYYY-MM-DD" | null,
+  "end_date": "YYYY-MM-DD" | null,
+  "time": "e.g. 3:00 PM" | null,
+  "location": "string" | null,
+  "notes": "string" | null,
+  "priority": "high" | "medium" | "low" | null,
+  "remind_at": "natural language when to remind" | null
+}
+
+For tasks tied to an event, use the event's date as start_date.
+Return ONLY the raw JSON array. No markdown, no code blocks, no explanation."""
+
+
 def _classify_prompt() -> str:
     today = datetime.now()
     date_line = f'Today is {today.strftime("%A, %B %d, %Y")} (ISO: {today.strftime("%Y-%m-%d")}).'
@@ -236,6 +274,27 @@ def classify_and_extract(text: str, api_key: str) -> Dict:
     return json.loads(cleaned)
 
 
+def classify_and_extract_multi(text: str, api_key: str) -> list:
+    """
+    Extract ALL actionable items from text.
+
+    Returns:
+        List of flat item dicts, each with: type, confidence, reasoning,
+        title, start_date, end_date, time, location, notes, priority, remind_at
+    """
+    client = Anthropic(api_key=api_key)
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=2048,
+        messages=[{"role": "user", "content": f"{_multi_classify_prompt()}\n\nInput:\n{text}"}]
+    )
+    cleaned = clean_json_response(message.content[0].text)
+    result = json.loads(cleaned)
+    if isinstance(result, dict):
+        result = [result]
+    return result
+
+
 MAX_IMAGE_BYTES = 4 * 1024 * 1024  # 4MB — stay under Claude's 5MB base64 limit
 
 
@@ -262,6 +321,47 @@ def _compress_image(image_path: Path) -> tuple[bytes, str]:
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=60, optimize=True)
     return buf.getvalue(), "image/jpeg"
+
+
+def classify_and_extract_multi_from_image(image_path: str, api_key: str) -> list:
+    """
+    Extract ALL actionable items from an image using Claude Vision.
+
+    Returns:
+        List of flat item dicts (same shape as classify_and_extract_multi).
+    """
+    import base64
+    image_file = Path(image_path)
+    if not image_file.exists():
+        raise FileNotFoundError(f"Image file not found: {image_path}")
+
+    raw = image_file.read_bytes()
+    if len(raw) > MAX_IMAGE_BYTES:
+        raw, media_type = _compress_image(image_file)
+    else:
+        media_types = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+                       '.gif': 'image/gif', '.webp': 'image/webp'}
+        media_type = media_types.get(image_file.suffix.lower(), 'image/jpeg')
+
+    image_data = base64.standard_b64encode(raw).decode("utf-8")
+    client = Anthropic(api_key=api_key)
+
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=2048,
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
+                {"type": "text", "text": _multi_classify_prompt()}
+            ]
+        }]
+    )
+    cleaned = clean_json_response(message.content[0].text)
+    result = json.loads(cleaned)
+    if isinstance(result, dict):
+        result = [result]
+    return result
 
 
 def classify_and_extract_from_image(image_path: str, api_key: str) -> Dict:

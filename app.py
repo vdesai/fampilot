@@ -27,6 +27,8 @@ from main import (
     extract_text_from_image,
     classify_and_extract,
     classify_and_extract_from_image,
+    classify_and_extract_multi,
+    classify_and_extract_multi_from_image,
     authenticate_google_calendar,
     create_calendar_event,
     GOOGLE_CALENDAR_AVAILABLE,
@@ -64,6 +66,35 @@ templates = Jinja2Templates(directory="templates")
 
 # Temporary storage for results (in-memory, resets on restart)
 items_store = {}
+
+# Batch storage for multi-item extraction (in-memory, keyed by batch_id)
+batch_store: dict = {}
+
+
+def _flat_to_result(flat: dict) -> dict:
+    """Convert flat multi-extraction item to legacy {type, confidence, reasoning, data} format."""
+    rtype = flat.get("type")
+    if rtype == "event":
+        data = {k: flat.get(k) for k in ("title", "start_date", "end_date", "time", "location", "notes")}
+    elif rtype == "task":
+        data = {
+            "title":    flat.get("title"),
+            "due_date": flat.get("start_date"),
+            "priority": flat.get("priority"),
+            "notes":    flat.get("notes"),
+        }
+    else:
+        data = {
+            "title":     flat.get("title"),
+            "remind_at": flat.get("remind_at"),
+            "notes":     flat.get("notes"),
+        }
+    return {
+        "type":       rtype,
+        "confidence": flat.get("confidence", 1.0),
+        "reasoning":  flat.get("reasoning", ""),
+        "data":       data,
+    }
 
 
 def parse_time_simple(time_str: str, date_str: str) -> Tuple[Optional[datetime], Optional[datetime]]:
@@ -240,14 +271,7 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
             })
 
         try:
-            if not TESSERACT_AVAILABLE:
-                result = classify_and_extract_from_image(str(file_path), api_key)
-            else:
-                extracted_text = extract_text_from_image(str(file_path))
-                if extracted_text:
-                    result = classify_and_extract(extracted_text, api_key)
-                else:
-                    result = classify_and_extract_from_image(str(file_path), api_key)
+            items = classify_and_extract_multi_from_image(str(file_path), api_key)
         except Exception as e:
             return templates.TemplateResponse(request, "result.html", {
                 "request": request,
@@ -257,8 +281,16 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
             if file_path and file_path.exists():
                 file_path.unlink()
 
-        item_id = str(uuid4())
-        return _render_result(request, result, item_id, image_path=file.filename)
+        if len(items) == 1:
+            item_id = str(uuid4())
+            flat = items[0]
+            db.save_flat_item(item_id, flat, image_path=file.filename)
+            result = _flat_to_result(flat)
+            return _render_result(request, result, item_id, image_path=file.filename, skip_db=True)
+
+        batch_id = str(uuid4())
+        batch_store[batch_id] = {"items": items, "source": file.filename, "is_image": True}
+        return RedirectResponse(url=f"/review/{batch_id}", status_code=303)
 
     except Exception as e:
         if file_path and file_path.exists():
@@ -286,15 +318,23 @@ async def process_text(request: Request, text: str = Form(...)):
         })
 
     try:
-        result = classify_and_extract(text.strip(), api_key)
+        items = classify_and_extract_multi(text.strip(), api_key)
     except Exception as e:
         return templates.TemplateResponse(request, "result.html", {
             "request": request,
             "error": f"Failed to analyze text: {str(e)}"
         })
 
-    item_id = str(uuid4())
-    return _render_result(request, result, item_id, source_text=text)
+    if len(items) == 1:
+        item_id = str(uuid4())
+        flat = items[0]
+        db.save_flat_item(item_id, flat, source_text=text)
+        result = _flat_to_result(flat)
+        return _render_result(request, result, item_id, source_text=text, skip_db=True)
+
+    batch_id = str(uuid4())
+    batch_store[batch_id] = {"items": items, "source": text, "is_image": False}
+    return RedirectResponse(url=f"/review/{batch_id}", status_code=303)
 
 
 def _result_to_calendar_data(result: Dict) -> Optional[Dict]:
@@ -355,10 +395,12 @@ CONFIDENCE_THRESHOLD = 0.80
 def _render_result(request: Request, result: Dict, item_id: str,
                    source_text: Optional[str] = None,
                    image_path: Optional[str] = None,
-                   message: Optional[str] = None):
+                   message: Optional[str] = None,
+                   skip_db: bool = False):
     """Persist result, store in memory, build context, render result.html."""
     items_store[item_id] = result
-    db.save_item(item_id, result, source_text=source_text, image_path=image_path)
+    if not skip_db:
+        db.save_item(item_id, result, source_text=source_text, image_path=image_path)
 
     context = {
         "request": request,
@@ -479,6 +521,56 @@ async def confirm_event(request: Request, item_id: str):
 @app.post("/cancel")
 async def cancel_event(request: Request):
     return RedirectResponse(url="/", status_code=303)
+
+
+@app.get("/review/{batch_id}", response_class=HTMLResponse)
+async def review_batch(request: Request, batch_id: str):
+    """Show all extracted items for the user to review before saving."""
+    batch = batch_store.get(batch_id)
+    if not batch:
+        return templates.TemplateResponse(request, "result.html", {
+            "request": request,
+            "error": "Review session expired. Please upload again.",
+        })
+    return templates.TemplateResponse(request, "review.html", {
+        "request": request,
+        "batch_id": batch_id,
+        "items": list(enumerate(batch["items"])),
+        "total": len(batch["items"]),
+        "nav_page": None,
+    })
+
+
+@app.post("/review/{batch_id}/save")
+async def save_batch(request: Request, batch_id: str):
+    """Save selected (and potentially edited) items from the review page."""
+    batch = batch_store.get(batch_id)
+    source_text = batch.get("source") if batch and not batch.get("is_image") else None
+    image_path  = batch.get("source") if batch and batch.get("is_image")     else None
+
+    form = await request.form()
+    item_count = int(form.get("item_count", 0))
+
+    for i in range(item_count):
+        if not form.get(f"include_{i}"):
+            continue
+        flat = {
+            "type":       form.get(f"type_{i}"),
+            "confidence": float(form.get(f"confidence_{i}", 0.9)),
+            "reasoning":  form.get(f"reasoning_{i}", ""),
+            "title":      form.get(f"title_{i}") or None,
+            "start_date": form.get(f"start_date_{i}") or None,
+            "end_date":   form.get(f"end_date_{i}") or None,
+            "time":       form.get(f"time_{i}") or None,
+            "location":   form.get(f"location_{i}") or None,
+            "notes":      form.get(f"notes_{i}") or None,
+            "priority":   form.get(f"priority_{i}") or None,
+            "remind_at":  form.get(f"remind_at_{i}") or None,
+        }
+        db.save_flat_item(str(uuid4()), flat, source_text=source_text, image_path=image_path)
+
+    batch_store.pop(batch_id, None)
+    return RedirectResponse(url="/history", status_code=303)
 
 
 @app.get("/history", response_class=HTMLResponse)
