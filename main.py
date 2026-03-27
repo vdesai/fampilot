@@ -194,36 +194,45 @@ def _multi_classify_prompt() -> str:
     return date_line + """
 Use this to resolve relative dates ("this Friday", "next Monday", "tomorrow", bare month/day — assume nearest future occurrence).
 
-You are a smart family assistant. Extract ALL actionable items from the input.
+You are a smart family assistant. Extract ALL actionable items from the input and group them under a shared context.
 
-Return ONLY a raw JSON array. Each element = one actionable item.
+Return ONLY a raw JSON object with this exact structure:
+{
+  "group_title": "concise name for the overall context",
+  "group_summary": "optional 1-sentence description, or null",
+  "items": [
+    {
+      "type": "event" | "task" | "reminder",
+      "confidence": 0.0-1.0,
+      "reasoning": "brief reason",
+      "title": "string",
+      "start_date": "YYYY-MM-DD" | null,
+      "end_date": "YYYY-MM-DD" | null,
+      "time": "e.g. 3:00 PM" | null,
+      "location": "string" | null,
+      "notes": "string" | null,
+      "priority": "high" | "medium" | "low" | null,
+      "remind_at": "natural language when to remind" | null
+    }
+  ]
+}
 
-Examples:
-- "School trip on Friday, bring lunch, pay $20" → 3 items: 1 event + 2 tasks
-- "Doctor appointment tomorrow at 3 PM, bring insurance card" → 2 items: 1 event + 1 task
+group_title rules:
+- Use the main event/topic as the group name (e.g. "School Trip", "Doctor's Appointment", "Grocery Run")
+- Be concise — 1–4 words
+- If only one item, group_title can match its title
 
-Classification:
+group_summary rules:
+- One sentence describing the overall context (e.g. "Friday school trip with prep tasks")
+- Omit (null) if the title is already self-explanatory
+
+item classification:
 - event: something happening at a specific time/place (appointment, party, meeting, trip)
 - task: something that needs to be done (bring, buy, pay, call, pick up, fill out)
 - reminder: something to remember / a recurring note
 
-Each object must have this exact shape (use null for fields that don't apply):
-{
-  "type": "event" | "task" | "reminder",
-  "confidence": 0.0-1.0,
-  "reasoning": "brief reason",
-  "title": "string",
-  "start_date": "YYYY-MM-DD" | null,
-  "end_date": "YYYY-MM-DD" | null,
-  "time": "e.g. 3:00 PM" | null,
-  "location": "string" | null,
-  "notes": "string" | null,
-  "priority": "high" | "medium" | "low" | null,
-  "remind_at": "natural language when to remind" | null
-}
-
 For tasks tied to an event, use the event's date as start_date.
-Return ONLY the raw JSON array. No markdown, no code blocks, no explanation."""
+Return ONLY the raw JSON object. No markdown, no code blocks, no explanation."""
 
 
 def _classify_prompt() -> str:
@@ -274,13 +283,16 @@ def classify_and_extract(text: str, api_key: str) -> Dict:
     return json.loads(cleaned)
 
 
-def classify_and_extract_multi(text: str, api_key: str) -> list:
+def classify_and_extract_multi(text: str, api_key: str) -> dict:
     """
-    Extract ALL actionable items from text.
+    Extract ALL actionable items from text, grouped under a shared context.
 
     Returns:
-        List of flat item dicts, each with: type, confidence, reasoning,
-        title, start_date, end_date, time, location, notes, priority, remind_at
+        {
+          "group_title": str,
+          "group_summary": str | None,
+          "items": list[dict]   # flat item dicts
+        }
     """
     client = Anthropic(api_key=api_key)
     message = client.messages.create(
@@ -290,9 +302,7 @@ def classify_and_extract_multi(text: str, api_key: str) -> list:
     )
     cleaned = clean_json_response(message.content[0].text)
     result = json.loads(cleaned)
-    if isinstance(result, dict):
-        result = [result]
-    return result
+    return _normalise_batch(result)
 
 
 MAX_IMAGE_BYTES = 4 * 1024 * 1024  # 4MB — stay under Claude's 5MB base64 limit
@@ -323,12 +333,26 @@ def _compress_image(image_path: Path) -> tuple[bytes, str]:
     return buf.getvalue(), "image/jpeg"
 
 
-def classify_and_extract_multi_from_image(image_path: str, api_key: str) -> list:
+def _normalise_batch(raw) -> dict:
+    """Coerce Claude's response into {group_title, group_summary, items} regardless of format."""
+    if isinstance(raw, list):
+        # Old array format — wrap it
+        title = raw[0].get("title", "Items") if raw else "Items"
+        return {"group_title": title, "group_summary": None, "items": raw}
+    if isinstance(raw, dict):
+        if "items" in raw:
+            return raw  # Already correct shape
+        # Single item object with no wrapper
+        return {"group_title": raw.get("title", "Item"), "group_summary": None, "items": [raw]}
+    return {"group_title": "Items", "group_summary": None, "items": []}
+
+
+def classify_and_extract_multi_from_image(image_path: str, api_key: str) -> dict:
     """
     Extract ALL actionable items from an image using Claude Vision.
 
     Returns:
-        List of flat item dicts (same shape as classify_and_extract_multi).
+        {group_title, group_summary, items} — same shape as classify_and_extract_multi.
     """
     import base64
     image_file = Path(image_path)
@@ -359,9 +383,7 @@ def classify_and_extract_multi_from_image(image_path: str, api_key: str) -> list
     )
     cleaned = clean_json_response(message.content[0].text)
     result = json.loads(cleaned)
-    if isinstance(result, dict):
-        result = [result]
-    return result
+    return _normalise_batch(result)
 
 
 def classify_and_extract_from_image(image_path: str, api_key: str) -> Dict:

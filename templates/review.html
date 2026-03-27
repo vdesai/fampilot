@@ -16,9 +16,58 @@
         .container { max-width: 700px; margin: 0 auto; padding: 30px 20px 120px; }
 
         /* ── Header ── */
-        .header { text-align: center; margin-bottom: 26px; }
+        .header { text-align: center; margin-bottom: 20px; }
         .header h1 { font-size: 26px; color: white; font-weight: 700; margin-bottom: 6px; }
         .header p  { color: rgba(255,255,255,0.8); font-size: 14px; }
+
+        /* ── Group context card ── */
+        .group-card {
+            background: rgba(255,255,255,0.14);
+            border: 1.5px solid rgba(255,255,255,0.25);
+            border-radius: 14px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            backdrop-filter: blur(6px);
+        }
+        .group-icon { font-size: 28px; flex-shrink: 0; }
+        .group-text { flex: 1; min-width: 0; }
+        .group-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .group-desc {
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .group-count {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* Connector line between group card and first item */
+        .group-connector {
+            width: 2px;
+            height: 14px;
+            background: rgba(255,255,255,0.3);
+            margin: 0 auto -4px;
+        }
 
         /* ── Review card ── */
         .review-card {
@@ -191,9 +240,23 @@
 
 <div class="container">
     <div class="header">
-        <h1>🧠 Found {{ total }} Item{{ 's' if total != 1 }}</h1>
+        <h1>🧠 {{ total }} Action{{ 's' if total != 1 }} Detected</h1>
         <p>Review and edit each item, then save the ones you want to keep.</p>
     </div>
+
+    {% if group_title %}
+    <div class="group-card">
+        <span class="group-icon">📦</span>
+        <div class="group-text">
+            <div class="group-name">{{ group_title }}</div>
+            {% if group_summary %}
+            <div class="group-desc">{{ group_summary }}</div>
+            {% endif %}
+        </div>
+        <span class="group-count">{{ total }} action{{ 's' if total != 1 }}</span>
+    </div>
+    <div class="group-connector"></div>
+    {% endif %}
 
     <form action="/review/{{ batch_id }}/save" method="post" id="reviewForm">
         <input type="hidden" name="item_count" value="{{ total }}">

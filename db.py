@@ -42,6 +42,9 @@ _MIGRATIONS = [
     ("reminder_time",        "TEXT"),
     ("reminder_sent",        "INTEGER DEFAULT 0"),
     ("reminder_triggered_at","TEXT"),
+    ("group_id",             "TEXT"),
+    ("group_title",          "TEXT"),
+    ("group_summary",        "TEXT"),
 ]
 
 
@@ -104,7 +107,10 @@ def save_item(item_id: str, result: dict,
 
 def save_flat_item(item_id: str, flat: dict,
                    source_text: Optional[str] = None,
-                   image_path: Optional[str] = None) -> None:
+                   image_path: Optional[str] = None,
+                   group_id: Optional[str] = None,
+                   group_title: Optional[str] = None,
+                   group_summary: Optional[str] = None) -> None:
     """Save a flat item dict (from multi-extraction) directly to DB."""
     with _conn() as con:
         con.execute(
@@ -112,8 +118,9 @@ def save_flat_item(item_id: str, flat: dict,
                (id, created_at, type, confidence, reasoning,
                 title, start_date, end_date, time, location,
                 notes, priority, remind_at,
-                original_input_text, uploaded_image_path)
-               VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?, ?,?)""",
+                original_input_text, uploaded_image_path,
+                group_id, group_title, group_summary)
+               VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?, ?,?, ?,?,?)""",
             (
                 item_id,
                 datetime.now(timezone.utc).isoformat(),
@@ -130,6 +137,9 @@ def save_flat_item(item_id: str, flat: dict,
                 flat.get("remind_at"),
                 source_text,
                 image_path,
+                group_id,
+                group_title,
+                group_summary,
             ),
         )
         con.commit()

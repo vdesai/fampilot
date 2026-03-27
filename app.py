@@ -271,7 +271,7 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
             })
 
         try:
-            items = classify_and_extract_multi_from_image(str(file_path), api_key)
+            batch = classify_and_extract_multi_from_image(str(file_path), api_key)
         except Exception as e:
             return templates.TemplateResponse(request, "result.html", {
                 "request": request,
@@ -281,15 +281,23 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
             if file_path and file_path.exists():
                 file_path.unlink()
 
+        items         = batch["items"]
+        group_title   = batch.get("group_title") or ""
+        group_summary = batch.get("group_summary")
+
         if len(items) == 1:
             item_id = str(uuid4())
             flat = items[0]
-            db.save_flat_item(item_id, flat, image_path=file.filename)
+            db.save_flat_item(item_id, flat, image_path=file.filename,
+                              group_title=group_title, group_summary=group_summary)
             result = _flat_to_result(flat)
             return _render_result(request, result, item_id, image_path=file.filename, skip_db=True)
 
         batch_id = str(uuid4())
-        batch_store[batch_id] = {"items": items, "source": file.filename, "is_image": True}
+        batch_store[batch_id] = {
+            "items": items, "source": file.filename, "is_image": True,
+            "group_id": str(uuid4()), "group_title": group_title, "group_summary": group_summary,
+        }
         return RedirectResponse(url=f"/review/{batch_id}", status_code=303)
 
     except Exception as e:
@@ -318,22 +326,30 @@ async def process_text(request: Request, text: str = Form(...)):
         })
 
     try:
-        items = classify_and_extract_multi(text.strip(), api_key)
+        batch = classify_and_extract_multi(text.strip(), api_key)
     except Exception as e:
         return templates.TemplateResponse(request, "result.html", {
             "request": request,
             "error": f"Failed to analyze text: {str(e)}"
         })
 
+    items         = batch["items"]
+    group_title   = batch.get("group_title") or ""
+    group_summary = batch.get("group_summary")
+
     if len(items) == 1:
         item_id = str(uuid4())
         flat = items[0]
-        db.save_flat_item(item_id, flat, source_text=text)
+        db.save_flat_item(item_id, flat, source_text=text,
+                          group_title=group_title, group_summary=group_summary)
         result = _flat_to_result(flat)
         return _render_result(request, result, item_id, source_text=text, skip_db=True)
 
     batch_id = str(uuid4())
-    batch_store[batch_id] = {"items": items, "source": text, "is_image": False}
+    batch_store[batch_id] = {
+        "items": items, "source": text, "is_image": False,
+        "group_id": str(uuid4()), "group_title": group_title, "group_summary": group_summary,
+    }
     return RedirectResponse(url=f"/review/{batch_id}", status_code=303)
 
 
@@ -533,11 +549,13 @@ async def review_batch(request: Request, batch_id: str):
             "error": "Review session expired. Please upload again.",
         })
     return templates.TemplateResponse(request, "review.html", {
-        "request": request,
-        "batch_id": batch_id,
-        "items": list(enumerate(batch["items"])),
-        "total": len(batch["items"]),
-        "nav_page": None,
+        "request":      request,
+        "batch_id":     batch_id,
+        "items":        list(enumerate(batch["items"])),
+        "total":        len(batch["items"]),
+        "group_title":  batch.get("group_title") or "",
+        "group_summary": batch.get("group_summary"),
+        "nav_page":     None,
     })
 
 
@@ -545,8 +563,11 @@ async def review_batch(request: Request, batch_id: str):
 async def save_batch(request: Request, batch_id: str):
     """Save selected (and potentially edited) items from the review page."""
     batch = batch_store.get(batch_id)
-    source_text = batch.get("source") if batch and not batch.get("is_image") else None
-    image_path  = batch.get("source") if batch and batch.get("is_image")     else None
+    source_text   = batch.get("source") if batch and not batch.get("is_image") else None
+    image_path    = batch.get("source") if batch and batch.get("is_image")     else None
+    group_id      = batch.get("group_id")      if batch else None
+    group_title   = batch.get("group_title")   if batch else None
+    group_summary = batch.get("group_summary") if batch else None
 
     form = await request.form()
     item_count = int(form.get("item_count", 0))
@@ -567,7 +588,8 @@ async def save_batch(request: Request, batch_id: str):
             "priority":   form.get(f"priority_{i}") or None,
             "remind_at":  form.get(f"remind_at_{i}") or None,
         }
-        db.save_flat_item(str(uuid4()), flat, source_text=source_text, image_path=image_path)
+        db.save_flat_item(str(uuid4()), flat, source_text=source_text, image_path=image_path,
+                          group_id=group_id, group_title=group_title, group_summary=group_summary)
 
     batch_store.pop(batch_id, None)
     return RedirectResponse(url="/history", status_code=303)
