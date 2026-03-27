@@ -420,13 +420,29 @@
             margin-bottom: 18px;
             backdrop-filter: blur(6px);
         }
-        .upcoming-title {
+        .upcoming-header {
             font-size: 12px;
             font-weight: 700;
             color: rgba(255,255,255,0.7);
             text-transform: uppercase;
             letter-spacing: 0.6px;
             margin-bottom: 10px;
+        }
+        .upcoming-group-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 10px 2px 5px;
+        }
+        .upcoming-group-label:first-of-type { margin-top: 0; }
+        .upcoming-empty {
+            font-size: 13px;
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            padding: 10px 0 4px;
+            font-style: italic;
         }
         .upcoming-item {
             display: flex;
@@ -515,32 +531,50 @@
         </div>
         {% endfor %}
 
-        <!-- Coming up section -->
-        {% if upcoming %}
+        <!-- Coming up section (always shown) -->
         <div class="upcoming-section">
-            <div class="upcoming-title">📅 Coming up</div>
-            {% set today = [] %}
-            {% set tomorrow_items = [] %}
-            {% for row in upcoming %}
-                {% if loop.index <= 5 %}
-                <a href="/history/{{ row.id }}" class="upcoming-item" data-id="{{ row.id }}">
-                    <span class="upcoming-icon">
-                        {% if row.type == 'event' %}📅{% elif row.type == 'task' %}✅{% else %}🔔{% endif %}
+            <div class="upcoming-header">📅 Coming Up</div>
+
+            {% if today_items %}
+            <div class="upcoming-group-label">Today</div>
+            {% for row in today_items %}
+            <a href="/history/{{ row.id }}" class="upcoming-item" data-id="{{ row.id }}">
+                <span class="upcoming-icon">
+                    {% if row.type == 'event' %}📅{% elif row.type == 'task' %}✅{% else %}🔔{% endif %}
+                </span>
+                <span class="upcoming-info">
+                    <span class="upcoming-name">{{ row.title or "Untitled" }}</span>
+                    <span class="upcoming-when" data-date="{{ row.start_date }}" data-time="{{ row.time or '' }}">
+                        <span class="upcoming-rel">Today</span>{% if row.time %} · <span class="upcoming-exact">{{ row.time }}</span>{% endif %}{% if row.type == 'task' and row.priority %} · <span class="upcoming-priority priority-{{ row.priority }}">{{ row.priority }}</span>{% endif %}
                     </span>
-                    <span class="upcoming-info">
-                        <span class="upcoming-name">{{ row.title or "Untitled" }}</span>
-                        <span class="upcoming-when"
-                              data-date="{{ row.start_date }}"
-                              data-time="{{ row.time or '' }}">
-                            <span class="upcoming-rel">{% if row.start_date == today_str %}Today{% else %}Tomorrow{% endif %}</span>{% if row.time %} · <span class="upcoming-exact">{{ row.time }}</span>{% endif %}{% if row.type == 'task' and row.priority %} · <span class="upcoming-priority priority-{{ row.priority }}">{{ row.priority }}</span>{% endif %}
-                        </span>
-                    </span>
-                    <span class="upcoming-arrow">›</span>
-                </a>
-                {% endif %}
+                </span>
+                <span class="upcoming-arrow">›</span>
+            </a>
             {% endfor %}
+            {% endif %}
+
+            {% if later_items %}
+            <div class="upcoming-group-label">Next 3 Days</div>
+            {% for row in later_items %}
+            <a href="/history/{{ row.id }}" class="upcoming-item" data-id="{{ row.id }}">
+                <span class="upcoming-icon">
+                    {% if row.type == 'event' %}📅{% elif row.type == 'task' %}✅{% else %}🔔{% endif %}
+                </span>
+                <span class="upcoming-info">
+                    <span class="upcoming-name">{{ row.title or "Untitled" }}</span>
+                    <span class="upcoming-when" data-date="{{ row.start_date }}" data-time="{{ row.time or '' }}">
+                        <span class="upcoming-rel">{{ row.start_date }}</span>{% if row.time %} · <span class="upcoming-exact">{{ row.time }}</span>{% endif %}{% if row.type == 'task' and row.priority %} · <span class="upcoming-priority priority-{{ row.priority }}">{{ row.priority }}</span>{% endif %}
+                    </span>
+                </span>
+                <span class="upcoming-arrow">›</span>
+            </a>
+            {% endfor %}
+            {% endif %}
+
+            {% if not today_items and not later_items %}
+            <div class="upcoming-empty">Nothing coming up in the next 3 days</div>
+            {% endif %}
         </div>
-        {% endif %}
 
         <!-- Main Card -->
         <div class="card">
@@ -690,11 +724,14 @@
 
             if (daysAway === 0) return `in ${diffH} hour${diffH === 1 ? '' : 's'}`;
             if (daysAway === 1) {
+                if (!timeStr) return 'tomorrow';
                 if (h < 10) return 'tomorrow morning';
                 if (h < 12) return 'tomorrow midday';
                 if (h < 17) return 'tomorrow afternoon';
                 return 'tomorrow evening';
             }
+            if (daysAway === 2) return 'in 2 days';
+            if (daysAway === 3) return 'in 3 days';
             return null;
         }
 

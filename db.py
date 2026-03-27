@@ -246,17 +246,16 @@ def dismiss_reminder(item_id: str) -> None:
 
 
 def get_upcoming_items() -> list:
-    """Events and tasks with start_date today or tomorrow, ordered by date+time."""
+    """Items with start_date from today through the next 3 days, ordered by date+time."""
     from datetime import date, timedelta
-    today     = date.today().isoformat()
-    tomorrow  = (date.today() + timedelta(days=1)).isoformat()
+    today    = date.today().isoformat()
+    in3days  = (date.today() + timedelta(days=3)).isoformat()
     with _conn() as con:
         return con.execute(
             """SELECT * FROM items
-               WHERE start_date IN (?, ?)
-                 AND type IN ('event', 'task')
+               WHERE start_date BETWEEN ? AND ?
                ORDER BY start_date, time""",
-            (today, tomorrow),
+            (today, in3days),
         ).fetchall()
 
 

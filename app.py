@@ -235,11 +235,16 @@ def generate_google_calendar_url(event: Dict[str, Optional[str]]) -> str:
 async def home(request: Request):
     """Render the home page with upload form and upcoming items."""
     from datetime import date
+    today_str = date.today().isoformat()
+    all_upcoming = db.get_upcoming_items()
+    today_items = [r for r in all_upcoming if r["start_date"] == today_str]
+    later_items = [r for r in all_upcoming if r["start_date"] != today_str]
     return templates.TemplateResponse(request, "index.html", {
-        "request":            request,
-        "nav_page":           "home",
-        "upcoming":           db.get_upcoming_items(),
-        "today_str":          date.today().isoformat(),
+        "request":             request,
+        "nav_page":            "home",
+        "today_items":         today_items,
+        "later_items":         later_items,
+        "today_str":           today_str,
         "triggered_reminders": db.get_recent_reminders(),
     })
 
