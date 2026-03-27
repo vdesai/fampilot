@@ -219,8 +219,9 @@
             background: linear-gradient(135deg, #28a745, #20c997);
             color: white;
         }
-        .btn-save:hover   { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(40,167,69,0.4); }
+        .btn-save:hover    { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(40,167,69,0.4); }
         .btn-save:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .save-count { font-weight: 400; opacity: 0.8; font-size: 13px; }
         .btn-cancel {
             flex: 0 0 auto;
             background: rgba(255,255,255,0.12);
@@ -364,8 +365,9 @@
 <!-- Sticky save bar (outside the scrollable container) -->
 <div class="save-bar">
     <div class="save-bar-inner">
-        <button type="submit" form="reviewForm" class="btn btn-save" id="saveBtn">
-            💾 Save {{ total }} Item{{ 's' if total != 1 }}
+        <button type="submit" form="reviewForm" class="btn btn-save" id="saveBtn"
+                data-group="{{ group_title }}">
+            💾 {% if group_title %}Save {{ group_title }}<span class="save-count"> · {{ total }} action{{ 's' if total != 1 }}</span>{% else %}Save {{ total }} Item{{ 's' if total != 1 }}{% endif %}
         </button>
         <a href="/" class="btn btn-cancel">Discard All</a>
     </div>
@@ -380,10 +382,17 @@ function toggleCard(i, checked) {
 function updateSaveBtn() {
     const n = document.querySelectorAll('.include-cb:checked').length;
     const btn = document.getElementById('saveBtn');
-    btn.textContent = n > 0
-        ? `💾 Save ${n} Item${n === 1 ? '' : 's'}`
-        : 'Nothing selected';
-    btn.disabled = n === 0;
+    const group = btn.dataset.group;
+    if (n === 0) {
+        btn.innerHTML = 'Nothing selected';
+        btn.disabled = true;
+        return;
+    }
+    const count = `<span class="save-count"> · ${n} action${n === 1 ? '' : 's'}</span>`;
+    btn.innerHTML = group
+        ? `💾 Save ${group}${count}`
+        : `💾 Save ${n} Item${n === 1 ? '' : 's'}`;
+    btn.disabled = false;
 }
 </script>
 </body>
