@@ -231,6 +231,58 @@ def generate_google_calendar_url(event: Dict[str, Optional[str]]) -> str:
     return url
 
 
+def _build_risk_items(today_items: list, later_items: list) -> list:
+    """Return at-risk items:
+    - All today's tasks and reminders (require action today)
+    - Today's events starting within the next 3 hours
+    - Tomorrow's high-priority tasks
+    """
+    import re
+    from datetime import date, timedelta
+    now      = datetime.now()
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    risk     = []
+
+    for row in today_items:
+        rtype = row["type"]
+        title = row["title"] or "Untitled"
+
+        if rtype in ("task", "reminder"):
+            icon = "✅" if rtype == "task" else "🔔"
+            risk.append({"icon": icon, "text": title, "when": "due today", "id": row["id"]})
+
+        elif rtype == "event":
+            time_str = row["time"] or ""
+            mt = re.search(r'(\d{1,2}):?(\d{2})?\s*(AM|PM)?', time_str, re.IGNORECASE) if time_str else None
+            if mt:
+                h = int(mt.group(1))
+                m = int(mt.group(2)) if mt.group(2) else 0
+                p = (mt.group(3) or "").upper()
+                if p == "PM" and h != 12: h += 12
+                if p == "AM" and h == 12: h = 0
+                event_dt   = now.replace(hour=h, minute=m, second=0, microsecond=0)
+                diff_mins  = (event_dt - now).total_seconds() / 60
+                if -30 <= diff_mins <= 180:   # started up to 30 min ago or within 3 h
+                    if diff_mins <= 0:
+                        when_label = "starting now"
+                    elif diff_mins < 60:
+                        mins = int(diff_mins)
+                        when_label = f"in {mins} min{'s' if mins != 1 else ''}"
+                    else:
+                        hrs = round(diff_mins / 60, 1)
+                        hrs_int = int(hrs)
+                        when_label = f"in {hrs_int} hour{'s' if hrs_int != 1 else ''}"
+                    risk.append({"icon": "📅", "text": title, "when": when_label, "id": row["id"]})
+            # Events with no parseable time are not flagged (not urgently missed)
+
+    for row in later_items:
+        if row["start_date"] == tomorrow and row["type"] == "task" and row["priority"] == "high":
+            risk.append({"icon": "✅", "text": row["title"] or "Untitled",
+                         "when": "due tomorrow", "id": row["id"]})
+
+    return risk
+
+
 def _build_daily_briefing(today_items: list) -> list:
     """Return a list of {icon, text, type, id} dicts for today's items."""
     lines = []
@@ -265,6 +317,7 @@ async def home(request: Request):
         "today_items":         today_items,
         "later_items":         later_items,
         "today_str":           today_str,
+        "risk_items":          _build_risk_items(today_items, later_items),
         "briefing":            _build_daily_briefing(today_items),
         "triggered_reminders": db.get_recent_reminders(),
     })

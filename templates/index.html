@@ -335,6 +335,52 @@
             flex: 1;
         }
 
+        /* ── Risk / Don't Miss ── */
+        .risk-card {
+            background: linear-gradient(135deg, rgba(255,180,60,0.18) 0%, rgba(255,140,40,0.10) 100%);
+            border: 1.5px solid rgba(255,200,80,0.35);
+            border-radius: 14px;
+            padding: 14px 16px 12px;
+            margin-bottom: 12px;
+            backdrop-filter: blur(6px);
+        }
+        .risk-header {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 10px;
+        }
+        .risk-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(255,220,100,0.95);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+        .risk-line {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            padding: 5px 4px;
+            border-radius: 7px;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .risk-line:hover { background: rgba(255,255,255,0.1); }
+        .risk-line-icon { font-size: 13px; flex-shrink: 0; line-height: 1.5; }
+        .risk-line-body { flex: 1; min-width: 0; }
+        .risk-line-text {
+            font-size: 13px;
+            color: rgba(255,255,255,0.9);
+            font-weight: 600;
+        }
+        .risk-line-when {
+            font-size: 11px;
+            color: rgba(255,210,80,0.85);
+            font-weight: 500;
+            margin-left: 6px;
+        }
+
         /* ── Daily Briefing ── */
         .briefing-card {
             background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.10) 100%);
@@ -606,6 +652,24 @@
             <button type="button" class="reminder-dismiss" title="Dismiss" onclick="dismissBanner(this.closest('.reminder-banner'))">×</button>
         </div>
         {% endfor %}
+
+        <!-- Don't Miss (only shown when there are risk items) -->
+        {% if risk_items %}
+        <div class="risk-card">
+            <div class="risk-header">
+                <span class="risk-title">⚠️ Don't Miss</span>
+            </div>
+            {% for item in risk_items %}
+            <a href="/history/{{ item.id }}" class="risk-line">
+                <span class="risk-line-icon">{{ item.icon }}</span>
+                <span class="risk-line-body">
+                    <span class="risk-line-text">{{ item.text }}</span>
+                    <span class="risk-line-when">{{ item.when }}</span>
+                </span>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
 
         <!-- Daily Briefing -->
         <div class="briefing-card">
