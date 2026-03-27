@@ -231,6 +231,26 @@ def generate_google_calendar_url(event: Dict[str, Optional[str]]) -> str:
     return url
 
 
+def _build_daily_briefing(today_items: list) -> list:
+    """Return a list of {icon, text, type, id} dicts for today's items."""
+    lines = []
+    for row in today_items:
+        rtype = row["type"]
+        title = row["title"] or "Untitled"
+        if rtype == "event":
+            detail = f" · {row['time']}" if row["time"] else ""
+            detail += f" @ {row['location']}" if row["location"] else ""
+            lines.append({"icon": "📅", "text": title + detail, "type": "event", "id": row["id"]})
+        elif rtype == "task":
+            pri = row["priority"] or "medium"
+            pri_label = f" · {pri} priority" if pri != "medium" else ""
+            lines.append({"icon": "✅", "text": title + pri_label, "type": "task", "id": row["id"]})
+        else:
+            when = f" · {row['remind_at']}" if row["remind_at"] else ""
+            lines.append({"icon": "🔔", "text": title + when, "type": "reminder", "id": row["id"]})
+    return lines
+
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Render the home page with upload form and upcoming items."""
@@ -245,6 +265,7 @@ async def home(request: Request):
         "today_items":         today_items,
         "later_items":         later_items,
         "today_str":           today_str,
+        "briefing":            _build_daily_briefing(today_items),
         "triggered_reminders": db.get_recent_reminders(),
     })
 

@@ -335,6 +335,59 @@
             flex: 1;
         }
 
+        /* ── Daily Briefing ── */
+        .briefing-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.10) 100%);
+            border: 1.5px solid rgba(255,255,255,0.28);
+            border-radius: 14px;
+            padding: 14px 16px 12px;
+            margin-bottom: 14px;
+            backdrop-filter: blur(6px);
+        }
+        .briefing-header {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 10px;
+        }
+        .briefing-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.9);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+        .briefing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ffd580;
+            flex-shrink: 0;
+        }
+        .briefing-line {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            padding: 5px 4px;
+            border-radius: 7px;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .briefing-line:hover { background: rgba(255,255,255,0.1); }
+        .briefing-line-icon { font-size: 13px; flex-shrink: 0; line-height: 1.5; }
+        .briefing-line-text {
+            font-size: 13px;
+            color: rgba(255,255,255,0.88);
+            font-weight: 500;
+            line-height: 1.4;
+        }
+        .briefing-empty {
+            font-size: 13px;
+            color: rgba(255,255,255,0.5);
+            font-style: italic;
+            padding: 2px 4px;
+        }
+
         /* ── Reminder banner ── */
         .reminder-banner {
             background: rgba(255, 220, 80, 0.18);
@@ -553,6 +606,24 @@
             <button type="button" class="reminder-dismiss" title="Dismiss" onclick="dismissBanner(this.closest('.reminder-banner'))">×</button>
         </div>
         {% endfor %}
+
+        <!-- Daily Briefing -->
+        <div class="briefing-card">
+            <div class="briefing-header">
+                <span class="briefing-dot"></span>
+                <span class="briefing-title">Today's Plan</span>
+            </div>
+            {% if briefing %}
+                {% for line in briefing %}
+                <a href="/history/{{ line.id }}" class="briefing-line">
+                    <span class="briefing-line-icon">{{ line.icon }}</span>
+                    <span class="briefing-line-text">{{ line.text }}</span>
+                </a>
+                {% endfor %}
+            {% else %}
+                <span class="briefing-empty">Nothing planned for today</span>
+            {% endif %}
+        </div>
 
         <!-- Coming up section (always shown) -->
         <div class="upcoming-section">
