@@ -341,7 +341,7 @@
             border: 1.5px solid rgba(255,200,80,0.35);
             border-radius: 14px;
             padding: 14px 16px 12px;
-            margin-bottom: 12px;
+            margin-bottom: 20px;
             backdrop-filter: blur(6px);
         }
         .risk-header {
@@ -381,40 +381,25 @@
             margin-left: 6px;
         }
 
-        /* ── Daily Briefing ── */
+        /* ── Daily Briefing (Today's Plan) ── */
         .briefing-card {
-            background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.10) 100%);
-            border: 1.5px solid rgba(255,255,255,0.28);
-            border-radius: 14px;
-            padding: 14px 16px 12px;
-            margin-bottom: 14px;
-            backdrop-filter: blur(6px);
-        }
-        .briefing-header {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            margin-bottom: 10px;
+            padding: 4px 6px 6px;
+            margin-bottom: 18px;
         }
         .briefing-title {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
-            color: rgba(255,255,255,0.9);
+            color: rgba(255,255,255,0.5);
             text-transform: uppercase;
             letter-spacing: 0.6px;
-        }
-        .briefing-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #ffd580;
-            flex-shrink: 0;
+            margin-bottom: 6px;
+            padding-left: 4px;
         }
         .briefing-line {
             display: flex;
             align-items: baseline;
             gap: 8px;
-            padding: 5px 4px;
+            padding: 5px 6px;
             border-radius: 7px;
             text-decoration: none;
             transition: background 0.15s;
@@ -423,15 +408,15 @@
         .briefing-line-icon { font-size: 13px; flex-shrink: 0; line-height: 1.5; }
         .briefing-line-text {
             font-size: 13px;
-            color: rgba(255,255,255,0.88);
+            color: rgba(255,255,255,0.75);
             font-weight: 500;
             line-height: 1.4;
         }
         .briefing-empty {
             font-size: 13px;
-            color: rgba(255,255,255,0.5);
+            color: rgba(255,255,255,0.4);
             font-style: italic;
-            padding: 2px 4px;
+            padding: 2px 6px;
         }
 
         /* ── Reminder banner ── */
@@ -513,20 +498,32 @@
 
         /* ── Coming up section ── */
         .upcoming-section {
-            background: rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.08);
             border-radius: 14px;
-            padding: 14px 16px;
+            padding: 12px 14px 10px;
             margin-bottom: 18px;
             backdrop-filter: blur(6px);
         }
         .upcoming-header {
-            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .upcoming-header-title {
+            font-size: 11px;
             font-weight: 700;
-            color: rgba(255,255,255,0.7);
+            color: rgba(255,255,255,0.5);
             text-transform: uppercase;
             letter-spacing: 0.6px;
-            margin-bottom: 10px;
         }
+        .upcoming-view-all {
+            font-size: 11px;
+            color: rgba(255,255,255,0.45);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .upcoming-view-all:hover { color: rgba(255,255,255,0.75); }
         .upcoming-group-label {
             font-size: 11px;
             font-weight: 700;
@@ -671,12 +668,10 @@
         </div>
         {% endif %}
 
-        <!-- Daily Briefing -->
+        <!-- Today's Plan (lighter, secondary) -->
+        {% if briefing or not risk_items %}
         <div class="briefing-card">
-            <div class="briefing-header">
-                <span class="briefing-dot"></span>
-                <span class="briefing-title">Today's Plan</span>
-            </div>
+            <div class="briefing-title">· Today</div>
             {% if briefing %}
                 {% for line in briefing %}
                 <a href="/history/{{ line.id }}" class="briefing-line">
@@ -685,34 +680,21 @@
                 </a>
                 {% endfor %}
             {% else %}
-                <span class="briefing-empty">Nothing planned for today</span>
+                <span class="briefing-empty">Nothing else planned for today</span>
             {% endif %}
         </div>
+        {% endif %}
 
-        <!-- Coming up section (always shown) -->
+        <!-- Coming Up (future only, max 3) -->
         <div class="upcoming-section">
-            <div class="upcoming-header">📅 Coming Up</div>
-
-            {% if today_items %}
-            <div class="upcoming-group-label">Today</div>
-            {% for row in today_items %}
-            <a href="/history/{{ row.id }}" class="upcoming-item" data-id="{{ row.id }}">
-                <span class="upcoming-icon">
-                    {% if row.type == 'event' %}📅{% elif row.type == 'task' %}✅{% else %}🔔{% endif %}
-                </span>
-                <span class="upcoming-info">
-                    <span class="upcoming-name">{{ row.title or "Untitled" }}</span>
-                    <span class="upcoming-when" data-date="{{ row.start_date }}" data-time="{{ row.time or '' }}">
-                        <span class="upcoming-rel">Today</span>{% if row.time %} · <span class="upcoming-exact">{{ row.time }}</span>{% endif %}{% if row.type == 'task' and row.priority %} · <span class="upcoming-priority priority-{{ row.priority }}">{{ row.priority }}</span>{% endif %}
-                    </span>
-                </span>
-                <span class="upcoming-arrow">›</span>
-            </a>
-            {% endfor %}
-            {% endif %}
+            <div class="upcoming-header">
+                <span class="upcoming-header-title">📅 Coming Up</span>
+                {% if later_total > 3 %}
+                <a href="/history" class="upcoming-view-all">View all →</a>
+                {% endif %}
+            </div>
 
             {% if later_items %}
-            <div class="upcoming-group-label">Next 3 Days</div>
             {% for row in later_items %}
             <a href="/history/{{ row.id }}" class="upcoming-item" data-id="{{ row.id }}">
                 <span class="upcoming-icon">
@@ -727,9 +709,7 @@
                 <span class="upcoming-arrow">›</span>
             </a>
             {% endfor %}
-            {% endif %}
-
-            {% if not today_items and not later_items %}
+            {% else %}
             <div class="upcoming-empty">
                 <div class="upcoming-empty-icon">📭</div>
                 <div class="upcoming-empty-primary">Nothing coming up</div>

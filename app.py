@@ -311,14 +311,18 @@ async def home(request: Request):
     all_upcoming = db.get_upcoming_items()
     today_items = [r for r in all_upcoming if r["start_date"] == today_str]
     later_items = [r for r in all_upcoming if r["start_date"] != today_str]
+    risk_items = _build_risk_items(today_items, later_items)
+    risk_ids   = {item["id"] for item in risk_items}
+    briefing   = [b for b in _build_daily_briefing(today_items) if b["id"] not in risk_ids]
+
     return templates.TemplateResponse(request, "index.html", {
         "request":             request,
         "nav_page":            "home",
-        "today_items":         today_items,
-        "later_items":         later_items,
         "today_str":           today_str,
-        "risk_items":          _build_risk_items(today_items, later_items),
-        "briefing":            _build_daily_briefing(today_items),
+        "risk_items":          risk_items,
+        "briefing":            briefing,
+        "later_items":         later_items[:3],
+        "later_total":         len(later_items),
         "triggered_reminders": db.get_recent_reminders(),
     })
 
