@@ -1292,9 +1292,15 @@ async def voice_command(request: Request, text: str = Form(...)):
 
     family_id = auth["family_id"]
 
-    # Get family's lists for context
+    # Get family context for AI
     lists = db.get_lists(family_id)
     list_names = [{"id": l["id"], "name": l["name"]} for l in lists]
+
+    chores = db.get_chores(family_id)
+    chore_names = [{"id": c["id"], "title": c["title"], "assigned_to": c["assigned_to"] or "everyone"} for c in chores]
+
+    members = db.get_family_members(family_id)
+    member_names = [m["display_name"] for m in members]
 
     from anthropic import Anthropic
     client = Anthropic(api_key=api_key)
@@ -1303,16 +1309,29 @@ async def voice_command(request: Request, text: str = Form(...)):
         max_tokens=512,
         messages=[{"role": "user", "content": f"""You are FamPilot, a family assistant. Parse this voice command and decide what to do.
 
-The family has these lists: {json.dumps(list_names)}
+Family members: {json.dumps(member_names)}
+Shopping lists: {json.dumps(list_names)}
+Chores: {json.dumps(chore_names)}
 
 Return ONLY a JSON object with one of these actions:
-1. Add items to a list: {{"action": "add_to_list", "list_id": "...", "items": ["item1", "item2"]}}
-   - If the list doesn't exist but should be created: {{"action": "create_list_and_add", "list_name": "...", "items": ["item1", "item2"]}}
-2. Create a calendar event: {{"action": "create_event", "text": "the original text for processing"}}
-3. Not sure / general: {{"action": "unknown", "text": "the original text"}}
 
-Be smart about matching. "Add milk to groceries" should match a list named "Groceries".
-"We need tomatoes and peppers" should add to a grocery-type list if one exists.
+1. Add items to a list: {{"action": "add_to_list", "list_id": "...", "items": ["item1", "item2"]}}
+   - If no matching list exists: {{"action": "create_list_and_add", "list_name": "...", "items": ["item1"]}}
+
+2. Mark a chore as done: {{"action": "chore_done", "chore_id": "..."}}
+
+3. Create a new chore: {{"action": "chore_create", "title": "...", "assigned_to": "...", "recurrence": "daily|weekly|none"}}
+   - Match assigned_to to a family member name. Use "" for everyone.
+
+4. Create a calendar event/task/reminder: {{"action": "create_event", "text": "the original text"}}
+
+5. Not sure: {{"action": "unknown", "text": "the original text"}}
+
+Be smart. "Mark dishes done" matches a chore with "dishes" in the title.
+"Add milk to groceries" matches a list named "Groceries".
+"Assign laundry to Alex" creates a chore assigned to Alex.
+"We need tomatoes" adds to a grocery-type list if one exists.
+"Dentist Tuesday 3pm" creates a calendar event.
 
 Voice command: "{text}"
 """}],
@@ -1358,6 +1377,34 @@ Voice command: "{text}"
             "list_id": list_id,
             "items": added,
         })
+
+    elif result.get("action") == "chore_done":
+        chore_id = result.get("chore_id")
+        chore = db.get_chore(chore_id) if chore_id else None
+        if chore and chore["family_id"] == family_id:
+            today_str = _local_today().isoformat()
+            log_id = str(uuid4())
+            db.log_chore_done(log_id, chore_id, auth["display_name"], today_str)
+            streak = db.get_chore_streak(chore_id, today_str)
+            return JSONResponse({
+                "action": "chore_done",
+                "chore_title": chore["title"],
+                "streak": streak,
+            })
+
+    elif result.get("action") == "chore_create":
+        title = result.get("title", "").strip()
+        if title:
+            chore_id = str(uuid4())
+            assigned = result.get("assigned_to", "")
+            recurrence = result.get("recurrence", "daily")
+            db.create_chore(chore_id, family_id, title,
+                            assigned_to=assigned, recurrence=recurrence)
+            return JSONResponse({
+                "action": "chore_created",
+                "title": title,
+                "assigned_to": assigned,
+            })
 
     elif result.get("action") == "create_event":
         return JSONResponse({
