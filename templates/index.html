@@ -1215,8 +1215,6 @@
         // ── Universal Voice Command (floating mic) ──
         let voiceRecognition = null;
         let voiceListening = false;
-        const voiceFab = document.getElementById('voiceFab');
-        const voiceListeningText = document.getElementById('voiceListeningText');
 
         function toggleVoice() {
             if (voiceListening) {
@@ -1238,17 +1236,17 @@
             voiceRecognition.interimResults = true;
             voiceRecognition.lang = 'en-US';
 
-            voiceFab.classList.add('listening');
+            document.getElementById('voiceFab').classList.add('listening');
             voiceListening = true;
-            voiceListeningText.textContent = 'Listening... say anything';
-            voiceListeningText.style.display = 'block';
+            document.getElementById('voiceListeningText').textContent = 'Listening... say anything';
+            document.getElementById('voiceListeningText').style.display = 'block';
 
             voiceRecognition.onresult = (e) => {
                 let transcript = '';
                 for (let i = 0; i < e.results.length; i++) {
                     transcript += e.results[i][0].transcript;
                 }
-                voiceListeningText.textContent = transcript || 'Listening...';
+                document.getElementById('voiceListeningText').textContent = transcript || 'Listening...';
 
                 if (e.results[e.results.length - 1].isFinal) {
                     executeVoiceCommand(transcript.trim());
@@ -1256,15 +1254,15 @@
             };
 
             voiceRecognition.onend = () => {
-                voiceFab.classList.remove('listening');
+                document.getElementById('voiceFab').classList.remove('listening');
                 voiceListening = false;
-                voiceListeningText.style.display = 'none';
+                document.getElementById('voiceListeningText').style.display = 'none';
             };
 
             voiceRecognition.onerror = (e) => {
-                voiceFab.classList.remove('listening');
+                document.getElementById('voiceFab').classList.remove('listening');
                 voiceListening = false;
-                voiceListeningText.style.display = 'none';
+                document.getElementById('voiceListeningText').style.display = 'none';
             };
 
             voiceRecognition.start();
@@ -1272,14 +1270,14 @@
 
         function stopVoice() {
             if (voiceRecognition) voiceRecognition.stop();
-            voiceFab.classList.remove('listening');
+            document.getElementById('voiceFab').classList.remove('listening');
             voiceListening = false;
-            voiceListeningText.style.display = 'none';
+            document.getElementById('voiceListeningText').style.display = 'none';
         }
 
         async function executeVoiceCommand(text) {
             if (!text) return;
-            voiceListeningText.textContent = 'Processing...';
+            document.getElementById('voiceListeningText').textContent = 'Processing...';
 
             const res = await fetch('/api/voice-command', {
                 method: 'POST',
@@ -1287,7 +1285,7 @@
                 body: `text=${encodeURIComponent(text)}`,
             });
             const data = await res.json();
-            voiceListeningText.style.display = 'none';
+            document.getElementById('voiceListeningText').style.display = 'none';
 
             // Show result card
             showVoiceResult(data, text);
