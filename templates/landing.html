@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FamPilot — Your Family's AI Assistant</title>
+    <meta name="description" content="Turn photos into calendar events. Shared grocery lists. Family chores. All by voice. No signup needed.">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/static/manifest.json">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #fff;
+            color: #1a1a1a;
+            -webkit-font-smoothing: antialiased;
+        }
+        a { color: inherit; }
+
+        /* ── Hero ── */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 60px 24px 70px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: white;
+            border-radius: 40px 40px 0 0;
+        }
+        .hero-logo { font-size: 56px; margin-bottom: 16px; }
+        .hero h1 {
+            font-size: 40px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+        .hero p {
+            font-size: 18px;
+            color: rgba(255,255,255,0.9);
+            max-width: 480px;
+            margin: 0 auto 32px;
+            line-height: 1.5;
+        }
+        .hero-cta {
+            display: inline-block;
+            padding: 16px 40px;
+            background: white;
+            color: #667eea;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 12px;
+            text-decoration: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .hero-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 28px rgba(0,0,0,0.2);
+        }
+        .hero-sub {
+            margin-top: 14px;
+            font-size: 13px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        /* ── How it works ── */
+        .section {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 60px 24px;
+        }
+        .section-title {
+            font-size: 32px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 12px;
+            letter-spacing: -0.3px;
+        }
+        .section-sub {
+            font-size: 16px;
+            color: #888;
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 32px;
+        }
+        .step {
+            text-align: center;
+            padding: 24px 16px;
+        }
+        .step-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .step-num {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 28px;
+            margin-bottom: 12px;
+        }
+        .step h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .step p {
+            font-size: 14px;
+            color: #888;
+            line-height: 1.5;
+        }
+
+        /* ── Features ── */
+        .features-bg {
+            background: #f8f9ff;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        .feature-card {
+            background: white;
+            border-radius: 16px;
+            padding: 28px 24px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .feature-icon {
+            font-size: 36px;
+            margin-bottom: 14px;
+        }
+        .feature-card h3 {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .feature-card p {
+            font-size: 14px;
+            color: #888;
+            line-height: 1.5;
+        }
+
+        /* ── Voice demo ── */
+        .voice-section {
+            text-align: center;
+            padding: 60px 24px;
+        }
+        .voice-examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .voice-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 18px;
+            background: #f0f2ff;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #555;
+        }
+        .voice-chip-mic {
+            font-size: 12px;
+        }
+
+        /* ── Pricing ── */
+        .pricing {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+            max-width: 640px;
+            margin: 0 auto;
+        }
+        .price-card {
+            border: 2px solid #e8e8e8;
+            border-radius: 16px;
+            padding: 32px 28px;
+            text-align: center;
+            position: relative;
+        }
+        .price-card.featured {
+            border-color: #667eea;
+            box-shadow: 0 4px 20px rgba(102,126,234,0.15);
+        }
+        .price-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #667eea;
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 14px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .price-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .price-amount {
+            font-size: 42px;
+            font-weight: 800;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+        .price-amount span {
+            font-size: 16px;
+            font-weight: 500;
+            color: #aaa;
+        }
+        .price-period {
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 24px;
+        }
+        .price-features {
+            list-style: none;
+            text-align: left;
+            margin-bottom: 28px;
+        }
+        .price-features li {
+            font-size: 14px;
+            color: #555;
+            padding: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .price-features li::before {
+            content: '✓';
+            color: #43a047;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .price-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: center;
+            transition: transform 0.15s;
+        }
+        .price-btn:hover { transform: translateY(-1px); }
+        .price-btn-free {
+            background: #f0f2ff;
+            color: #667eea;
+        }
+        .price-btn-pro {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+        }
+
+        /* ── Footer ── */
+        .landing-footer {
+            text-align: center;
+            padding: 40px 24px;
+            background: #fafafa;
+            border-top: 1px solid #f0f0f0;
+        }
+        .landing-footer p {
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 30px; }
+            .hero p { font-size: 16px; }
+            .section-title { font-size: 26px; }
+            .price-amount { font-size: 36px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <div class="hero-logo">📅</div>
+    <h1>Your family, organized.</h1>
+    <p>Snap a photo of a school flyer, speak your grocery list, assign chores — FamPilot handles the rest.</p>
+    <a href="/welcome" class="hero-cta">Get Started Free</a>
+    <div class="hero-sub">No email needed. No password. Start in 10 seconds.</div>
+</div>
+
+<div class="section">
+    <div class="section-title">How it works</div>
+    <div class="section-sub">Three ways to never forget anything again</div>
+    <div class="steps">
+        <div class="step">
+            <div class="step-icon">📸</div>
+            <div class="step-num">1</div>
+            <h3>Snap</h3>
+            <p>Take a photo of any flyer, schedule, or note. AI extracts events, tasks, and reminders automatically.</p>
+        </div>
+        <div class="step">
+            <div class="step-icon">🎙️</div>
+            <div class="step-num">2</div>
+            <h3>Speak</h3>
+            <p>"Add milk and eggs to groceries." The voice agent handles lists, chores, and calendar events.</p>
+        </div>
+        <div class="step">
+            <div class="step-icon">👨‍👩‍👧‍👦</div>
+            <div class="step-num">3</div>
+            <h3>Share</h3>
+            <p>Everything syncs instantly with your family. One invite code and everyone's connected.</p>
+        </div>
+    </div>
+</div>
+
+<div class="features-bg">
+    <div class="section">
+        <div class="section-title">Everything your family needs</div>
+        <div class="section-sub">One app instead of five</div>
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">📅</div>
+                <h3>Photo to Calendar</h3>
+                <p>Snap a school flyer or party invite. Events appear on everyone's calendar.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🛒</div>
+                <h3>Shared Lists</h3>
+                <p>Grocery lists, to-dos, packing lists — shared in real time with the whole family.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🧹</div>
+                <h3>Chore Tracker</h3>
+                <p>Assign chores, track streaks, see who did what. No more arguing.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎙️</div>
+                <h3>Voice Agent</h3>
+                <p>Tap the mic anywhere. The AI figures out what you need and does it.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔔</div>
+                <h3>Smart Reminders</h3>
+                <p>Never miss a pickup, deadline, or appointment again.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>No Account Needed</h3>
+                <p>No email. No password. Start in seconds. Family joins with a code.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="voice-section">
+    <div class="section-title">Just say it</div>
+    <div class="section-sub">The mic button works on every page</div>
+    <div class="voice-examples">
+        <div class="voice-chip"><span class="voice-chip-mic">🎙️</span> "Add milk and bread to groceries"</div>
+        <div class="voice-chip"><span class="voice-chip-mic">🎙️</span> "Mark dishes done"</div>
+        <div class="voice-chip"><span class="voice-chip-mic">🎙️</span> "Dentist Tuesday at 3"</div>
+        <div class="voice-chip"><span class="voice-chip-mic">🎙️</span> "Assign laundry to Alex"</div>
+        <div class="voice-chip"><span class="voice-chip-mic">🎙️</span> "We need sunscreen and towels for the trip"</div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Simple pricing</div>
+    <div class="section-sub">Free for most families. Pro for power users.</div>
+    <div class="pricing">
+        <div class="price-card">
+            <div class="price-name">Free</div>
+            <div class="price-amount">$0</div>
+            <div class="price-period">forever</div>
+            <ul class="price-features">
+                <li>5 AI scans per month</li>
+                <li>Unlimited shared lists</li>
+                <li>Chore tracking</li>
+                <li>Voice commands</li>
+                <li>Up to 20 family members</li>
+            </ul>
+            <a href="/welcome" class="price-btn price-btn-free">Start Free</a>
+        </div>
+        <div class="price-card featured">
+            <div class="price-badge">Best Value</div>
+            <div class="price-name">Pro</div>
+            <div class="price-amount">$5<span>/mo</span></div>
+            <div class="price-period">per family · cancel anytime</div>
+            <ul class="price-features">
+                <li>Unlimited AI scans</li>
+                <li>Unlimited voice commands</li>
+                <li>Photo-to-list scanning</li>
+                <li>Priority AI processing</li>
+                <li>Everything in Free</li>
+            </ul>
+            <a href="/welcome" class="price-btn price-btn-pro">Start Free Trial</a>
+        </div>
+    </div>
+</div>
+
+<div class="landing-footer">
+    <p>Made for families, by families. Powered by Claude AI.</p>
+</div>
+
+</body>
+</html>

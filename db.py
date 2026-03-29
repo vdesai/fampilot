@@ -829,5 +829,43 @@ def get_chore_streak(chore_id: str, today: str) -> int:
     return streak
 
 
+# ── Usage tracking (freemium) ──
+
+FREE_SCAN_LIMIT = 5  # per family per month
+
+def get_scan_count(family_id: str) -> int:
+    """Count AI scans this month for a family."""
+    month_start = _local_today().replace(day=1).isoformat()
+    with _conn() as con:
+        row = con.execute(
+            """SELECT COUNT(*) AS cnt FROM items
+               WHERE family_id = ? AND created_at >= ?""",
+            (family_id, month_start),
+        ).fetchone()
+        return row["cnt"] if row else 0
+
+
+def can_scan(family_id: str) -> bool:
+    """Check if the family has remaining free scans this month."""
+    # Check if family has premium
+    premium = get_setting(f"premium:{family_id}")
+    if premium == "1":
+        return True
+    return get_scan_count(family_id) < FREE_SCAN_LIMIT
+
+
+def get_usage_info(family_id: str) -> dict:
+    """Return usage info for display."""
+    premium = get_setting(f"premium:{family_id}") == "1"
+    count = get_scan_count(family_id)
+    return {
+        "premium": premium,
+        "scans_used": count,
+        "scans_limit": FREE_SCAN_LIMIT,
+        "scans_remaining": max(0, FREE_SCAN_LIMIT - count) if not premium else 999,
+        "can_scan": premium or count < FREE_SCAN_LIMIT,
+    }
+
+
 # Initialise on import
 init_db()

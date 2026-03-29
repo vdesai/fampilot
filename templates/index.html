@@ -801,6 +801,17 @@
             </div>
         </div>
 
+        <!-- Usage meter (free tier) -->
+        {% if usage and not usage.premium %}
+        <div class="share-widget" style="{% if usage.scans_remaining <= 1 %}border-color: rgba(255,100,100,0.4); background: rgba(255,100,100,0.12);{% endif %}">
+            <span class="share-icon">{% if usage.scans_remaining > 1 %}⚡{% else %}⚠️{% endif %}</span>
+            <div class="share-info">
+                <div class="share-label">AI Scans</div>
+                <div class="share-url">{{ usage.scans_used }}/{{ usage.scans_limit }} used this month{% if usage.scans_remaining == 0 %} · <strong>Upgrade for more</strong>{% endif %}</div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Don't Miss (only shown when there are risk items) -->
         {% if risk_items %}
         <div class="risk-card">

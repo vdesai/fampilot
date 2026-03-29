@@ -428,7 +428,7 @@ async def home(request: Request):
     """Render the home page with upload form and upcoming items."""
     auth = _require_auth(request)
     if not auth:
-        return RedirectResponse(url="/welcome", status_code=303)
+        return templates.TemplateResponse(request, "landing.html", {"request": request})
 
     family_id = auth["family_id"]
     today_str = _local_today().isoformat()
@@ -465,6 +465,7 @@ async def home(request: Request):
         "invite_code":         invite_code,
         "join_url":            join_url,
         "members":             members,
+        "usage":               db.get_usage_info(family_id),
     })
 
 
@@ -499,6 +500,14 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
         return RedirectResponse(url="/welcome", status_code=303)
 
     family_id = auth["family_id"]
+
+    if not db.can_scan(family_id):
+        return templates.TemplateResponse(request, "result.html", {
+            "request": request,
+            "error": "You've used all 5 free AI scans this month. Upgrade to FamPilot Pro for unlimited scans.",
+            "show_upgrade": True,
+        })
+
     file_path = None
     try:
         upload_dir = Path("uploads")
@@ -563,6 +572,14 @@ async def process_text(request: Request, text: str = Form(...)):
         return RedirectResponse(url="/welcome", status_code=303)
 
     family_id = auth["family_id"]
+
+    if not db.can_scan(family_id):
+        return templates.TemplateResponse(request, "result.html", {
+            "request": request,
+            "error": "You've used all 5 free AI scans this month. Upgrade to FamPilot Pro for unlimited scans.",
+            "show_upgrade": True,
+        })
+
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         return templates.TemplateResponse(request, "result.html", {
