@@ -769,23 +769,19 @@
         </div>
         {% endif %}
 
-        <!-- Today's Plan (lighter, secondary) -->
-        {% if briefing or not risk_items %}
+        <!-- Today's Plan (only shown when there's actual content) -->
+        {% if briefing %}
         <div class="briefing-card">
             <div class="briefing-title">· Today</div>
-            {% if briefing %}
-                {% for line in briefing %}
-                <div class="briefing-line" id="row-{{ line.id }}">
-                    <span class="briefing-line-icon">{{ line.icon }}</span>
-                    <a href="/history/{{ line.id }}" class="briefing-line-text" style="text-decoration:none;color:inherit;">{{ line.text }}</a>
-                    {% if line.type in ('task', 'reminder') %}
-                    <button class="complete-btn" onclick="completeItem('{{ line.id }}')" title="Mark done">✓</button>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            {% else %}
-                <span class="briefing-empty">Nothing else planned for today</span>
-            {% endif %}
+            {% for line in briefing %}
+            <div class="briefing-line" id="row-{{ line.id }}">
+                <span class="briefing-line-icon">{{ line.icon }}</span>
+                <a href="/history/{{ line.id }}" class="briefing-line-text" style="text-decoration:none;color:inherit;">{{ line.text }}</a>
+                {% if line.type in ('task', 'reminder') %}
+                <button class="complete-btn" onclick="completeItem('{{ line.id }}')" title="Mark done">✓</button>
+                {% endif %}
+            </div>
+            {% endfor %}
         </div>
         {% endif %}
 
