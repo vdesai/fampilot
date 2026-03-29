@@ -129,24 +129,22 @@
             color: #888;
             margin-bottom: 12px;
         }
-        .join-input-row {
-            display: flex;
-            gap: 8px;
-        }
         .join-input {
-            flex: 1;
+            width: 100%;
             text-align: center;
             text-transform: uppercase;
-            letter-spacing: 3px;
+            letter-spacing: 6px;
             font-weight: 700;
-            font-size: 18px !important;
+            font-size: 24px !important;
+            padding: 18px 16px !important;
+            margin-bottom: 12px;
         }
         .btn-join {
+            width: 100%;
             background: #f0f2ff;
             color: #667eea;
             border: 2px solid #667eea;
             padding: 14px 24px;
-            white-space: nowrap;
         }
         .btn-join:hover {
             background: #667eea;
@@ -216,11 +214,9 @@
                 <div class="join-section">
                     <div class="join-label">Have an invite code? Join your family</div>
                     <form action="/join-by-code" method="post">
-                        <div class="join-input-row">
-                            <input type="text" name="code" class="join-input" placeholder="ABC123" maxlength="6" required
-                                   pattern="[A-Za-z0-9]{6}" title="6-character invite code">
-                            <button type="submit" class="btn btn-join">Join</button>
-                        </div>
+                        <input type="text" name="code" class="join-input" placeholder="ABC123" maxlength="6" required
+                               pattern="[A-Za-z0-9]{6}" title="6-character invite code" autocomplete="off" autocapitalize="characters">
+                        <button type="submit" class="btn btn-join">Join Family</button>
                     </form>
                 </div>
 
