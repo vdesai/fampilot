@@ -1,0 +1,33 @@
+{
+  "name": "FamPilot",
+  "short_name": "FamPilot",
+  "description": "Turn any photo into a family calendar event",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "file",
+          "accept": ["image/jpeg", "image/png", "image/jpg", "image/webp", "image/gif"]
+        }
+      ],
+      "text": "text",
+      "title": "title"
+    }
+  }
+}

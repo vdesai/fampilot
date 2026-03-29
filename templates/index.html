@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FamPilot - Event Assistant</title>
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FamPilot">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icon.svg">
     <style>
         * {
             margin: 0;
@@ -333,6 +340,37 @@
             font-size: 14px;
             font-weight: 500;
             flex: 1;
+        }
+
+        /* ── Install banner ── */
+        .install-banner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.15);
+            border: 1.5px solid rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            backdrop-filter: blur(6px);
+        }
+        .install-hidden { display: none !important; }
+        .install-text { flex: 1; font-size: 13px; color: white; font-weight: 500; }
+        .install-text strong { display: block; font-size: 14px; margin-bottom: 1px; }
+        .install-sub { font-size: 12px; opacity: 0.75; }
+        .install-btn {
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            padding: 7px 14px !important;
+            border-radius: 8px !important;
+            background: white !important;
+            color: #667eea !important;
+            border: none !important;
+            cursor: pointer;
+            width: auto !important;
+            box-shadow: none !important;
+            transform: none !important;
+            white-space: nowrap;
         }
 
         /* ── Family share widget ── */
@@ -735,6 +773,16 @@
         </div>
         {% endfor %}
 
+        <!-- Install banner (shown only when browser fires beforeinstallprompt) -->
+        <div class="install-banner install-hidden" id="installBanner">
+            <span style="font-size:22px;flex-shrink:0;">📲</span>
+            <div class="install-text">
+                <strong>Add to Home Screen</strong>
+                <span class="install-sub">Share photos directly from your camera roll</span>
+            </div>
+            <button class="install-btn" onclick="installApp()">Install</button>
+        </div>
+
         <!-- Family share widget -->
         <div class="share-widget">
             <span class="share-icon">👨‍👩‍👧‍👦</span>
@@ -1046,6 +1094,30 @@
                     document.getElementById('uploadArea').click();
                 }
             }, 350);
+        }
+
+        // ── PWA install prompt ──
+        let _installPrompt = null;
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            _installPrompt = e;
+            document.getElementById('installBanner')?.classList.remove('install-hidden');
+        });
+        function installApp() {
+            if (!_installPrompt) return;
+            _installPrompt.prompt();
+            _installPrompt.userChoice.then(() => {
+                _installPrompt = null;
+                document.getElementById('installBanner')?.classList.add('install-hidden');
+            });
+        }
+        window.addEventListener('appinstalled', () => {
+            document.getElementById('installBanner')?.classList.add('install-hidden');
+        });
+
+        // ── Register service worker ──
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js');
         }
 
         document.querySelectorAll('.reminder-banner[data-id]').forEach(banner => {

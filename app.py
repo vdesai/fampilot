@@ -61,7 +61,8 @@ async def lifespan(app: "FastAPI"):
 # Initialize FastAPI app
 app = FastAPI(title="FamPilot Event Assistant", lifespan=lifespan)
 
-# Setup templates
+# Static files + templates
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Temporary storage for results (in-memory, resets on restart)
@@ -357,6 +358,27 @@ async def home(request: Request):
 async def dismiss_reminder(item_id: str):
     """Dismiss a triggered reminder banner."""
     db.dismiss_reminder(item_id)
+    return RedirectResponse(url="/", status_code=303)
+
+
+@app.get("/share-target")
+async def share_target_get(request: Request):
+    """Redirect direct visits to home."""
+    return RedirectResponse(url="/", status_code=303)
+
+
+@app.post("/share-target")
+async def share_target_post(request: Request,
+                             file: UploadFile = File(None),
+                             text: str = Form(None),
+                             title: str = Form(None)):
+    """Receive shared photo or text from the OS share sheet."""
+    if file and file.filename:
+        # Treat exactly like a manual upload
+        return await upload_image(request, file=file)
+    if text or title:
+        combined = "\n".join(filter(None, [title, text]))
+        return await process_text(request, text=combined)
     return RedirectResponse(url="/", status_code=303)
 
 
