@@ -90,6 +90,88 @@
         }
         .add-btn:hover { transform: translateY(-1px); }
 
+        /* Voice + Camera buttons */
+        .input-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .action-btn {
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 12px;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s, background 0.15s;
+            flex-shrink: 0;
+        }
+        .action-btn:hover { transform: translateY(-1px); }
+        .mic-btn {
+            background: white;
+            color: #667eea;
+        }
+        .mic-btn.listening {
+            background: #ff4444;
+            color: white;
+            animation: pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+        .cam-btn {
+            background: rgba(255,255,255,0.85);
+            color: #667eea;
+        }
+        .cam-btn input { display: none; }
+
+        /* Voice feedback */
+        .voice-feedback {
+            max-width: 540px;
+            margin: 8px auto 0;
+            font-size: 13px;
+            color: rgba(255,255,255,0.8);
+            font-style: italic;
+            min-height: 20px;
+            text-align: center;
+        }
+
+        /* Processing overlay */
+        .processing {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .processing-card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px 40px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        }
+        .processing-spinner {
+            width: 36px;
+            height: 36px;
+            border: 4px solid #e0e0e0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .processing-text {
+            font-size: 15px;
+            color: #555;
+            font-weight: 500;
+        }
+
         /* Content */
         .content {
             max-width: 540px;
@@ -244,10 +326,18 @@
         </div>
         <div class="add-bar" style="max-width:540px;margin:0 auto;">
             <input type="text" id="addInput" class="add-input"
-                   placeholder="Add item... (Enter to add, one per line)"
+                   placeholder="Type, speak, or snap a photo..."
                    autofocus>
-            <button type="button" class="add-btn" onclick="addItems()">+</button>
+            <div class="input-actions">
+                <button type="button" class="add-btn" onclick="addItems()">+</button>
+                <button type="button" class="action-btn mic-btn" id="micBtn" onclick="toggleMic()" title="Speak items">🎙️</button>
+                <label class="action-btn cam-btn" title="Scan items from photo">
+                    📷
+                    <input type="file" id="camInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+                </label>
+            </div>
         </div>
+        <div class="voice-feedback" id="voiceFeedback"></div>
     </div>
 
     <div class="content">
@@ -421,6 +511,212 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // ── Voice Input (Web Speech API) ──
+        let recognition = null;
+        let isListening = false;
+
+        function toggleMic() {
+            if (isListening) {
+                stopMic();
+            } else {
+                startMic();
+            }
+        }
+
+        function startMic() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                showFeedback('Speech recognition not supported in this browser');
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            const micBtn = document.getElementById('micBtn');
+            micBtn.classList.add('listening');
+            isListening = true;
+            showFeedback('Listening...');
+
+            recognition.onresult = (e) => {
+                let transcript = '';
+                for (let i = 0; i < e.results.length; i++) {
+                    transcript += e.results[i][0].transcript;
+                }
+                showFeedback(transcript);
+
+                // When final result is ready, process it
+                if (e.results[e.results.length - 1].isFinal) {
+                    processVoice(transcript.trim());
+                }
+            };
+
+            recognition.onend = () => {
+                micBtn.classList.remove('listening');
+                isListening = false;
+            };
+
+            recognition.onerror = (e) => {
+                micBtn.classList.remove('listening');
+                isListening = false;
+                if (e.error !== 'no-speech') {
+                    showFeedback('Could not hear you. Tap mic and try again.');
+                }
+            };
+
+            recognition.start();
+        }
+
+        function stopMic() {
+            if (recognition) {
+                recognition.stop();
+            }
+            document.getElementById('micBtn').classList.remove('listening');
+            isListening = false;
+        }
+
+        async function processVoice(text) {
+            if (!text) return;
+            showFeedback('Adding items...');
+
+            const res = await fetch('/api/voice-to-items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `text=${encodeURIComponent(text)}`,
+            });
+            const data = await res.json();
+
+            if (data.items && data.items.length > 0) {
+                // Add each item to the list
+                const itemsText = data.items.join('\n');
+                const addRes = await fetch(`/lists/${listId}/add`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json',
+                    },
+                    body: `text=${encodeURIComponent(itemsText)}`,
+                });
+                const addData = await addRes.json();
+                if (addData.ok) {
+                    const empty = document.getElementById('emptyState');
+                    if (empty) empty.style.display = 'none';
+
+                    const list = document.getElementById('uncheckedList');
+                    for (const item of addData.added) {
+                        const div = document.createElement('div');
+                        div.className = 'item';
+                        div.id = `item-${item.id}`;
+                        div.dataset.id = item.id;
+                        div.innerHTML = `
+                            <button class="checkbox" onclick="toggleCheck('${item.id}', true)">✓</button>
+                            <div class="item-text">${escapeHtml(item.text)}</div>
+                            <button class="item-delete" onclick="deleteItem('${item.id}')" title="Remove">×</button>
+                        `;
+                        div.style.opacity = '0';
+                        div.style.transform = 'translateY(-8px)';
+                        list.appendChild(div);
+                        requestAnimationFrame(() => {
+                            div.style.transition = 'opacity 0.25s, transform 0.25s';
+                            div.style.opacity = '1';
+                            div.style.transform = 'translateY(0)';
+                        });
+                    }
+                    updateStatus();
+                    showFeedback(`Added ${addData.added.length} item${addData.added.length === 1 ? '' : 's'}`);
+                    setTimeout(() => showFeedback(''), 3000);
+                }
+            } else {
+                showFeedback('No items detected. Try again.');
+                setTimeout(() => showFeedback(''), 3000);
+            }
+        }
+
+        function showFeedback(msg) {
+            document.getElementById('voiceFeedback').textContent = msg;
+        }
+
+        // ── Camera / Photo Input ──
+        async function handlePhoto(input) {
+            const file = input.files[0];
+            if (!file) return;
+            input.value = ''; // Reset for re-use
+
+            // Show processing overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'processing';
+            overlay.id = 'processingOverlay';
+            overlay.innerHTML = `
+                <div class="processing-card">
+                    <div class="processing-spinner"></div>
+                    <div class="processing-text">Scanning items...</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/photo-to-items', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const data = await res.json();
+
+                if (data.items && data.items.length > 0) {
+                    const itemsText = data.items.join('\n');
+                    const addRes = await fetch(`/lists/${listId}/add`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'Accept': 'application/json',
+                        },
+                        body: `text=${encodeURIComponent(itemsText)}`,
+                    });
+                    const addData = await addRes.json();
+                    if (addData.ok) {
+                        const empty = document.getElementById('emptyState');
+                        if (empty) empty.style.display = 'none';
+
+                        const list = document.getElementById('uncheckedList');
+                        for (const item of addData.added) {
+                            const div = document.createElement('div');
+                            div.className = 'item';
+                            div.id = `item-${item.id}`;
+                            div.dataset.id = item.id;
+                            div.innerHTML = `
+                                <button class="checkbox" onclick="toggleCheck('${item.id}', true)">✓</button>
+                                <div class="item-text">${escapeHtml(item.text)}</div>
+                                <button class="item-delete" onclick="deleteItem('${item.id}')" title="Remove">×</button>
+                            `;
+                            div.style.opacity = '0';
+                            div.style.transform = 'translateY(-8px)';
+                            list.appendChild(div);
+                            requestAnimationFrame(() => {
+                                div.style.transition = 'opacity 0.25s, transform 0.25s';
+                                div.style.opacity = '1';
+                                div.style.transform = 'translateY(0)';
+                            });
+                        }
+                        updateStatus();
+                        showFeedback(`Scanned ${addData.added.length} item${addData.added.length === 1 ? '' : 's'} from photo`);
+                        setTimeout(() => showFeedback(''), 4000);
+                    }
+                } else {
+                    showFeedback('No items found in photo. Try again.');
+                    setTimeout(() => showFeedback(''), 3000);
+                }
+            } catch (err) {
+                showFeedback('Failed to scan photo.');
+                setTimeout(() => showFeedback(''), 3000);
+            }
+
+            document.getElementById('processingOverlay')?.remove();
         }
     </script>
 </body>

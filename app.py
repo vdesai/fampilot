@@ -1126,6 +1126,181 @@ async def delete_list_route(request: Request, list_id: str):
     return RedirectResponse(url="/lists", status_code=303)
 
 
+# ── Voice / AI agent routes ──
+
+@app.post("/api/voice-to-items")
+async def voice_to_items(request: Request, text: str = Form(...)):
+    """AI parses spoken text into individual list items."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        # Fallback: just split by commas/and
+        items = [s.strip() for s in re.split(r',|\band\b', text) if s.strip()]
+        return JSONResponse({"items": items})
+
+    from anthropic import Anthropic
+    client = Anthropic(api_key=api_key)
+    msg = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=512,
+        messages=[{"role": "user", "content": f"""Extract individual shopping/grocery items from this spoken text.
+Return ONLY a JSON array of strings. No explanation.
+If the text contains non-list items (like greetings or filler words), ignore them.
+Example: "we need milk eggs and some bread oh and tomatoes" → ["Milk", "Eggs", "Bread", "Tomatoes"]
+
+Spoken text: "{text}"
+"""}],
+    )
+    try:
+        from main import clean_json_response
+        cleaned = clean_json_response(msg.content[0].text)
+        items = json.loads(cleaned)
+        if not isinstance(items, list):
+            items = [text]
+    except Exception:
+        items = [s.strip() for s in re.split(r',|\band\b', text) if s.strip()]
+
+    return JSONResponse({"items": items})
+
+
+@app.post("/api/photo-to-items")
+async def photo_to_items(request: Request, file: UploadFile = File(...)):
+    """AI extracts list items from a photo (receipt, shelf, handwritten list)."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        return JSONResponse({"error": "ANTHROPIC_API_KEY not set"}, status_code=500)
+
+    import base64
+    from anthropic import Anthropic
+
+    image_data = await file.read()
+    content_type = file.content_type or "image/jpeg"
+    b64 = base64.standard_b64encode(image_data).decode("utf-8")
+
+    client = Anthropic(api_key=api_key)
+    msg = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": [
+            {"type": "image", "source": {"type": "base64", "media_type": content_type, "data": b64}},
+            {"type": "text", "text": """Look at this image and extract all items that would go on a shopping/grocery list.
+This could be a receipt, a handwritten list, a photo of a fridge/pantry shelf, or food items.
+Return ONLY a JSON array of strings — the item names. No explanation, no markdown.
+Example: ["Milk", "Eggs", "Bread", "Tomatoes"]
+If you can't identify specific items, return an empty array [].
+"""},
+        ]}],
+    )
+    try:
+        from main import clean_json_response
+        cleaned = clean_json_response(msg.content[0].text)
+        items = json.loads(cleaned)
+        if not isinstance(items, list):
+            items = []
+    except Exception:
+        items = []
+
+    return JSONResponse({"items": items})
+
+
+@app.post("/api/voice-command")
+async def voice_command(request: Request, text: str = Form(...)):
+    """Universal voice command — AI decides what to do: add to list, create event, set reminder."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        # Fallback: try to parse simple "add X to Y" patterns
+        return JSONResponse({"action": "unknown", "text": text})
+
+    family_id = auth["family_id"]
+
+    # Get family's lists for context
+    lists = db.get_lists(family_id)
+    list_names = [{"id": l["id"], "name": l["name"]} for l in lists]
+
+    from anthropic import Anthropic
+    client = Anthropic(api_key=api_key)
+    msg = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=512,
+        messages=[{"role": "user", "content": f"""You are FamPilot, a family assistant. Parse this voice command and decide what to do.
+
+The family has these lists: {json.dumps(list_names)}
+
+Return ONLY a JSON object with one of these actions:
+1. Add items to a list: {{"action": "add_to_list", "list_id": "...", "items": ["item1", "item2"]}}
+   - If the list doesn't exist but should be created: {{"action": "create_list_and_add", "list_name": "...", "items": ["item1", "item2"]}}
+2. Create a calendar event: {{"action": "create_event", "text": "the original text for processing"}}
+3. Not sure / general: {{"action": "unknown", "text": "the original text"}}
+
+Be smart about matching. "Add milk to groceries" should match a list named "Groceries".
+"We need tomatoes and peppers" should add to a grocery-type list if one exists.
+
+Voice command: "{text}"
+"""}],
+    )
+    try:
+        from main import clean_json_response
+        cleaned = clean_json_response(msg.content[0].text)
+        result = json.loads(cleaned)
+    except Exception:
+        result = {"action": "unknown", "text": text}
+
+    # Execute the action
+    if result.get("action") == "add_to_list":
+        list_id = result.get("list_id")
+        items = result.get("items", [])
+        lst = db.get_list(list_id) if list_id else None
+        if lst and lst["family_id"] == family_id:
+            added = []
+            for item_text in items:
+                item_id = str(uuid4())
+                db.add_list_item(item_id, list_id, item_text, added_by=auth["display_name"])
+                added.append({"id": item_id, "text": item_text})
+            return JSONResponse({
+                "action": "added_to_list",
+                "list_name": lst["name"],
+                "list_id": list_id,
+                "items": added,
+            })
+
+    elif result.get("action") == "create_list_and_add":
+        list_name = result.get("list_name", "Shopping List")
+        items = result.get("items", [])
+        list_id = str(uuid4())
+        db.create_list(list_id, family_id, list_name)
+        added = []
+        for item_text in items:
+            item_id = str(uuid4())
+            db.add_list_item(item_id, list_id, item_text, added_by=auth["display_name"])
+            added.append({"id": item_id, "text": item_text})
+        return JSONResponse({
+            "action": "created_list_and_added",
+            "list_name": list_name,
+            "list_id": list_id,
+            "items": added,
+        })
+
+    elif result.get("action") == "create_event":
+        return JSONResponse({
+            "action": "create_event",
+            "text": result.get("text", text),
+            "redirect": f"/process-text",
+        })
+
+    return JSONResponse({"action": "unknown", "text": text})
+
+
 if __name__ == "__main__":
     import uvicorn
 
