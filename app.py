@@ -305,6 +305,20 @@ def _build_daily_briefing(today_items: list) -> list:
     return lines
 
 
+def _local_today():
+    """Return today's date in the configured timezone (APP_TIMEZONE env var)."""
+    from datetime import date
+    tz_name = os.getenv("APP_TIMEZONE")
+    if tz_name:
+        try:
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+            return datetime.now(ZoneInfo(tz_name)).date()
+        except Exception:
+            pass
+    return date.today()
+
+
 def _base_url(request: Request) -> str:
     """Return the public base URL, respecting X-Forwarded-Proto on Render."""
     proto = request.headers.get("x-forwarded-proto", request.url.scheme)
@@ -315,8 +329,7 @@ def _base_url(request: Request) -> str:
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Render the home page with upload form and upcoming items."""
-    from datetime import date
-    today_str = date.today().isoformat()
+    today_str = _local_today().isoformat()
     all_upcoming = db.get_upcoming_items()
     today_items = [r for r in all_upcoming if r["start_date"] == today_str]
     later_items = [r for r in all_upcoming if r["start_date"] != today_str]
@@ -700,10 +713,10 @@ async def family_view(request: Request, token: str):
             "request": request, "invalid": True, "days": [], "has_items": False,
         })
 
-    from datetime import date, timedelta
+    from datetime import timedelta
     from collections import defaultdict
 
-    today = date.today()
+    today = _local_today()
     rows  = db.get_family_week()
 
     by_date: dict = defaultdict(list)
@@ -721,7 +734,7 @@ async def family_view(request: Request, token: str):
         elif i == 1:
             label = "Tomorrow"
         else:
-            label = d.strftime("%A, %b %-d")
+            label = f"{d.strftime('%A, %b')} {d.day}"
 
         day_items = []
         for row in by_date[d_str]:

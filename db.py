@@ -10,8 +10,20 @@ on a Render Persistent Disk (e.g. /data/fampilot.db) to survive redeploys.
 
 import os
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, date, timedelta, timezone
 from typing import Optional
+
+
+def _local_today() -> date:
+    """Return today's date in the configured timezone (APP_TIMEZONE env var)."""
+    tz_name = os.getenv("APP_TIMEZONE")
+    if tz_name:
+        try:
+            from zoneinfo import ZoneInfo
+            return datetime.now(ZoneInfo(tz_name)).date()
+        except Exception:
+            pass
+    return date.today()
 
 DB_PATH = os.getenv("DB_PATH", "fampilot.db")
 
@@ -98,9 +110,9 @@ def get_or_create_family_token() -> str:
 
 def get_family_week() -> list:
     """All non-completed items from today through the next 7 days."""
-    from datetime import date, timedelta
-    today   = date.today().isoformat()
-    in7days = (date.today() + timedelta(days=7)).isoformat()
+    today   = _local_today()
+    in7days = (today + timedelta(days=7)).isoformat()
+    today   = today.isoformat()
     with _conn() as con:
         return con.execute(
             """SELECT * FROM items
@@ -292,9 +304,9 @@ def dismiss_reminder(item_id: str) -> None:
 
 def get_upcoming_items() -> list:
     """Items with start_date from today through the next 3 days, ordered by date+time."""
-    from datetime import date, timedelta
-    today    = date.today().isoformat()
-    in3days  = (date.today() + timedelta(days=3)).isoformat()
+    today    = _local_today()
+    in3days  = (today + timedelta(days=3)).isoformat()
+    today    = today.isoformat()
     with _conn() as con:
         return con.execute(
             """SELECT * FROM items
