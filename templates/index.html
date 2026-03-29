@@ -783,16 +783,21 @@
             <button class="install-btn" onclick="installApp()">Install</button>
         </div>
 
-        <!-- Family share widget -->
+        <!-- Family info + invite -->
         <div class="share-widget">
             <span class="share-icon">👨‍👩‍👧‍👦</span>
             <div class="share-info">
-                <div class="share-label">Family link</div>
-                <div class="share-url" id="familyUrl">{{ family_url }}</div>
+                <div class="share-label">{{ auth.family_name }}</div>
+                <div class="share-url">
+                    Invite code: <strong id="inviteCode">{{ invite_code }}</strong>
+                    {% if members|length > 1 %}
+                    &nbsp;·&nbsp;{{ members|length }} members
+                    {% endif %}
+                </div>
             </div>
             <div class="share-actions">
-                <button class="share-btn" id="copyBtn" onclick="copyFamilyLink()">Copy</button>
-                <a href="{{ family_url }}" target="_blank" class="share-btn" style="text-decoration:none;">View</a>
+                <button class="share-btn" id="copyBtn" onclick="copyInvite()">Copy Link</button>
+                <a href="{{ family_url }}" target="_blank" class="share-btn" style="text-decoration:none;">Week</a>
             </div>
         </div>
 
@@ -1055,13 +1060,13 @@
             setTimeout(() => el.remove(), 420);
         }
 
-        async function copyFamilyLink() {
-            const url = document.getElementById('familyUrl').textContent.trim();
-            await navigator.clipboard.writeText(url);
+        async function copyInvite() {
+            const joinUrl = '{{ join_url }}';
+            await navigator.clipboard.writeText(joinUrl);
             const btn = document.getElementById('copyBtn');
             btn.textContent = 'Copied!';
             btn.classList.add('copied');
-            setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+            setTimeout(() => { btn.textContent = 'Copy Link'; btn.classList.remove('copied'); }, 2000);
         }
 
         async function completeItem(id) {

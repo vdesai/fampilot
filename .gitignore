@@ -57,3 +57,4 @@ test_images/
 *.jpg
 *.jpeg
 !example.png
+fampilot.db

@@ -9,6 +9,8 @@ on a Render Persistent Disk (e.g. /data/fampilot.db) to survive redeploys.
 """
 
 import os
+import secrets
+import string
 import sqlite3
 from datetime import datetime, date, timedelta, timezone
 from typing import Optional
@@ -24,6 +26,7 @@ def _local_today() -> date:
         except Exception:
             pass
     return date.today()
+
 
 DB_PATH = os.getenv("DB_PATH", "fampilot.db")
 
@@ -56,6 +59,44 @@ CREATE TABLE IF NOT EXISTS items (
 )
 """
 
+_CREATE_FAMILIES = """
+CREATE TABLE IF NOT EXISTS families (
+    id         TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    created_at TEXT NOT NULL
+)
+"""
+
+_CREATE_MEMBERS = """
+CREATE TABLE IF NOT EXISTS members (
+    id           TEXT PRIMARY KEY,
+    family_id    TEXT NOT NULL REFERENCES families(id),
+    display_name TEXT DEFAULT 'Family Member',
+    role         TEXT DEFAULT 'member',
+    created_at   TEXT NOT NULL
+)
+"""
+
+_CREATE_DEVICES = """
+CREATE TABLE IF NOT EXISTS devices (
+    id         TEXT PRIMARY KEY,
+    member_id  TEXT NOT NULL REFERENCES members(id),
+    last_seen  TEXT,
+    user_agent TEXT
+)
+"""
+
+_CREATE_INVITE_CODES = """
+CREATE TABLE IF NOT EXISTS invite_codes (
+    code       TEXT PRIMARY KEY,
+    family_id  TEXT NOT NULL REFERENCES families(id),
+    created_by TEXT REFERENCES members(id),
+    expires_at TEXT NOT NULL,
+    max_uses   INTEGER DEFAULT 20,
+    use_count  INTEGER DEFAULT 0
+)
+"""
+
 # Columns added after initial release — ALTER TABLE is idempotent via try/except
 _MIGRATIONS = [
     ("reminder_time",        "TEXT"),
@@ -65,6 +106,7 @@ _MIGRATIONS = [
     ("group_title",          "TEXT"),
     ("group_summary",        "TEXT"),
     ("completed",            "INTEGER DEFAULT 0"),
+    ("family_id",            "TEXT"),
 ]
 
 
@@ -79,6 +121,10 @@ def init_db() -> None:
     with _conn() as con:
         con.execute(_CREATE_SETTINGS)
         con.execute(_CREATE_TABLE)
+        con.execute(_CREATE_FAMILIES)
+        con.execute(_CREATE_MEMBERS)
+        con.execute(_CREATE_DEVICES)
+        con.execute(_CREATE_INVITE_CODES)
         for col, defn in _MIGRATIONS:
             try:
                 con.execute(f"ALTER TABLE items ADD COLUMN {col} {defn}")
@@ -86,6 +132,8 @@ def init_db() -> None:
                 pass  # column already exists
         con.commit()
 
+
+# ── Settings ──
 
 def get_setting(key: str) -> Optional[str]:
     with _conn() as con:
@@ -99,8 +147,144 @@ def set_setting(key: str, value: str) -> None:
         con.commit()
 
 
+# ── Families, members, devices ──
+
+def create_family(family_id: str, name: str) -> None:
+    with _conn() as con:
+        con.execute(
+            "INSERT INTO families (id, name, created_at) VALUES (?,?,?)",
+            (family_id, name, datetime.now(timezone.utc).isoformat()),
+        )
+        con.commit()
+
+
+def get_family(family_id: str) -> Optional[sqlite3.Row]:
+    with _conn() as con:
+        return con.execute("SELECT * FROM families WHERE id=?", (family_id,)).fetchone()
+
+
+def create_member(member_id: str, family_id: str, display_name: str, role: str = "member") -> None:
+    with _conn() as con:
+        con.execute(
+            "INSERT INTO members (id, family_id, display_name, role, created_at) VALUES (?,?,?,?,?)",
+            (member_id, family_id, display_name, role, datetime.now(timezone.utc).isoformat()),
+        )
+        con.commit()
+
+
+def get_member(member_id: str) -> Optional[sqlite3.Row]:
+    with _conn() as con:
+        return con.execute("SELECT * FROM members WHERE id=?", (member_id,)).fetchone()
+
+
+def create_device(device_id: str, member_id: str, user_agent: str = "") -> None:
+    with _conn() as con:
+        con.execute(
+            "INSERT INTO devices (id, member_id, last_seen, user_agent) VALUES (?,?,?,?)",
+            (device_id, member_id, datetime.now(timezone.utc).isoformat(), user_agent),
+        )
+        con.commit()
+
+
+def get_device(device_id: str) -> Optional[sqlite3.Row]:
+    with _conn() as con:
+        return con.execute("SELECT * FROM devices WHERE id=?", (device_id,)).fetchone()
+
+
+def touch_device(device_id: str) -> None:
+    with _conn() as con:
+        con.execute(
+            "UPDATE devices SET last_seen=? WHERE id=?",
+            (datetime.now(timezone.utc).isoformat(), device_id),
+        )
+        con.commit()
+
+
+def resolve_device(device_id: str) -> Optional[dict]:
+    """Given a device_id cookie, return {device, member, family} or None."""
+    with _conn() as con:
+        row = con.execute(
+            """SELECT d.id AS device_id, d.member_id,
+                      m.family_id, m.display_name, m.role,
+                      f.name AS family_name
+               FROM devices d
+               JOIN members m ON m.id = d.member_id
+               JOIN families f ON f.id = m.family_id
+               WHERE d.id = ?""",
+            (device_id,),
+        ).fetchone()
+        if not row:
+            return None
+        return dict(row)
+
+
+def get_family_members(family_id: str) -> list:
+    with _conn() as con:
+        return con.execute(
+            "SELECT * FROM members WHERE family_id=? ORDER BY created_at",
+            (family_id,),
+        ).fetchall()
+
+
+# ── Invite codes ──
+
+def _generate_code() -> str:
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(secrets.choice(chars) for _ in range(6))
+
+
+def create_invite_code(family_id: str, created_by: str) -> str:
+    code = _generate_code()
+    expires = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    with _conn() as con:
+        con.execute(
+            "INSERT INTO invite_codes (code, family_id, created_by, expires_at) VALUES (?,?,?,?)",
+            (code, family_id, created_by, expires),
+        )
+        con.commit()
+    return code
+
+
+def get_invite_code(code: str) -> Optional[sqlite3.Row]:
+    with _conn() as con:
+        return con.execute("SELECT * FROM invite_codes WHERE code=?", (code.upper(),)).fetchone()
+
+
+def use_invite_code(code: str) -> bool:
+    """Increment use_count. Returns False if expired or maxed out."""
+    now = datetime.now(timezone.utc).isoformat()
+    with _conn() as con:
+        row = con.execute("SELECT * FROM invite_codes WHERE code=?", (code.upper(),)).fetchone()
+        if not row:
+            return False
+        if row["expires_at"] < now:
+            return False
+        if row["use_count"] >= row["max_uses"]:
+            return False
+        con.execute(
+            "UPDATE invite_codes SET use_count = use_count + 1 WHERE code=?",
+            (code.upper(),),
+        )
+        con.commit()
+        return True
+
+
+def get_active_invite_code(family_id: str) -> Optional[str]:
+    """Return the active (non-expired, not maxed) invite code for a family, or None."""
+    now = datetime.now(timezone.utc).isoformat()
+    with _conn() as con:
+        row = con.execute(
+            """SELECT code FROM invite_codes
+               WHERE family_id=? AND expires_at > ? AND use_count < max_uses
+               ORDER BY expires_at DESC LIMIT 1""",
+            (family_id, now),
+        ).fetchone()
+        return row["code"] if row else None
+
+
+# ── Legacy family token (for /family/:token share page) ──
+
 def get_or_create_family_token() -> str:
-    import secrets
     token = get_setting("family_token")
     if not token:
         token = secrets.token_urlsafe(12)
@@ -108,29 +292,31 @@ def get_or_create_family_token() -> str:
     return token
 
 
-def get_family_week() -> list:
-    """All non-completed items from today through the next 7 days."""
+# ── Items (now scoped by family_id) ──
+
+def get_family_week(family_id: str) -> list:
+    """All non-completed items from today through the next 7 days for a family."""
     today   = _local_today()
     in7days = (today + timedelta(days=7)).isoformat()
     today   = today.isoformat()
     with _conn() as con:
         return con.execute(
             """SELECT * FROM items
-               WHERE start_date BETWEEN ? AND ?
+               WHERE family_id = ?
+                 AND start_date BETWEEN ? AND ?
                  AND (completed IS NULL OR completed = 0)
                ORDER BY start_date, time""",
-            (today, in7days),
+            (family_id, today, in7days),
         ).fetchall()
 
 
 def save_item(item_id: str, result: dict,
               source_text: Optional[str] = None,
-              image_path: Optional[str] = None) -> None:
+              image_path: Optional[str] = None,
+              family_id: Optional[str] = None) -> None:
     """Upsert a classified result into the DB."""
     rtype = result.get("type")
     data = result.get("data", {})
-
-    # Tasks store their due_date in start_date column
     start_date = data.get("start_date") or (data.get("due_date") if rtype == "task" else None)
 
     with _conn() as con:
@@ -139,8 +325,8 @@ def save_item(item_id: str, result: dict,
                (id, created_at, type, confidence, reasoning,
                 title, start_date, end_date, time, location,
                 notes, priority, remind_at,
-                original_input_text, uploaded_image_path)
-               VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?, ?,?)""",
+                original_input_text, uploaded_image_path, family_id)
+               VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?, ?,?,?)""",
             (
                 item_id,
                 datetime.now(timezone.utc).isoformat(),
@@ -157,6 +343,7 @@ def save_item(item_id: str, result: dict,
                 data.get("remind_at"),
                 source_text,
                 image_path,
+                family_id,
             ),
         )
         con.commit()
@@ -167,7 +354,8 @@ def save_flat_item(item_id: str, flat: dict,
                    image_path: Optional[str] = None,
                    group_id: Optional[str] = None,
                    group_title: Optional[str] = None,
-                   group_summary: Optional[str] = None) -> None:
+                   group_summary: Optional[str] = None,
+                   family_id: Optional[str] = None) -> None:
     """Save a flat item dict (from multi-extraction) directly to DB."""
     with _conn() as con:
         con.execute(
@@ -176,8 +364,8 @@ def save_flat_item(item_id: str, flat: dict,
                 title, start_date, end_date, time, location,
                 notes, priority, remind_at,
                 original_input_text, uploaded_image_path,
-                group_id, group_title, group_summary)
-               VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?, ?,?, ?,?,?)""",
+                group_id, group_title, group_summary, family_id)
+               VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?, ?,?, ?,?,?,?)""",
             (
                 item_id,
                 datetime.now(timezone.utc).isoformat(),
@@ -197,13 +385,13 @@ def save_flat_item(item_id: str, flat: dict,
                 group_id,
                 group_title,
                 group_summary,
+                family_id,
             ),
         )
         con.commit()
 
 
 def update_type(item_id: str, new_type: str) -> None:
-    """Update just the type + clear confidence/reasoning after user override."""
     with _conn() as con:
         con.execute(
             "UPDATE items SET type=?, confidence=1.0, reasoning=? WHERE id=?",
@@ -213,7 +401,6 @@ def update_type(item_id: str, new_type: str) -> None:
 
 
 def update_event_data(item_id: str, data: dict) -> None:
-    """Update editable event fields after user edits."""
     with _conn() as con:
         con.execute(
             """UPDATE items
@@ -232,7 +419,6 @@ def update_event_data(item_id: str, data: dict) -> None:
 
 
 def update_item(item_id: str, rtype: str, fields: dict) -> None:
-    """Persist edited fields for any item type."""
     start_date = fields.get("start_date") or fields.get("due_date")
     with _conn() as con:
         con.execute(
@@ -258,7 +444,6 @@ def update_item(item_id: str, rtype: str, fields: dict) -> None:
 
 
 def get_due_reminders() -> list:
-    """Items whose reminder_time has passed and haven't been notified yet."""
     now = datetime.now(timezone.utc).isoformat()
     with _conn() as con:
         return con.execute(
@@ -280,40 +465,38 @@ def mark_reminder_sent(item_id: str) -> None:
         con.commit()
 
 
-def get_recent_reminders(hours: int = 6) -> list:
-    """Items triggered within the last N hours and not yet dismissed."""
-    from datetime import timedelta
+def get_recent_reminders(family_id: str, hours: int = 6) -> list:
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
     with _conn() as con:
         return con.execute(
             """SELECT * FROM items
-               WHERE reminder_triggered_at IS NOT NULL
+               WHERE family_id = ?
+                 AND reminder_triggered_at IS NOT NULL
                  AND reminder_triggered_at >= ?
                  AND (reminder_sent IS NULL OR reminder_sent != 2)
                ORDER BY reminder_triggered_at DESC""",
-            (cutoff,),
+            (family_id, cutoff),
         ).fetchall()
 
 
 def dismiss_reminder(item_id: str) -> None:
-    """Mark a triggered reminder as dismissed (reminder_sent=2)."""
     with _conn() as con:
         con.execute("UPDATE items SET reminder_sent=2 WHERE id=?", (item_id,))
         con.commit()
 
 
-def get_upcoming_items() -> list:
-    """Items with start_date from today through the next 3 days, ordered by date+time."""
+def get_upcoming_items(family_id: str) -> list:
     today    = _local_today()
     in3days  = (today + timedelta(days=3)).isoformat()
     today    = today.isoformat()
     with _conn() as con:
         return con.execute(
             """SELECT * FROM items
-               WHERE start_date BETWEEN ? AND ?
+               WHERE family_id = ?
+                 AND start_date BETWEEN ? AND ?
                  AND (completed IS NULL OR completed = 0)
                ORDER BY start_date, time""",
-            (today, in3days),
+            (family_id, today, in3days),
         ).fetchall()
 
 
@@ -330,22 +513,20 @@ def uncomplete_item(item_id: str) -> None:
 
 
 def delete_item(item_id: str) -> None:
-    """Permanently delete an item."""
     with _conn() as con:
         con.execute("DELETE FROM items WHERE id=?", (item_id,))
         con.commit()
 
 
-def get_history(limit: int = 100) -> list:
-    """Return items ordered newest first."""
+def get_history(family_id: str, limit: int = 100) -> list:
     with _conn() as con:
         return con.execute(
-            "SELECT * FROM items ORDER BY created_at DESC LIMIT ?", (limit,)
+            "SELECT * FROM items WHERE family_id=? ORDER BY created_at DESC LIMIT ?",
+            (family_id, limit),
         ).fetchall()
 
 
 def get_item(item_id: str) -> Optional[sqlite3.Row]:
-    """Fetch a single item by id."""
     with _conn() as con:
         return con.execute(
             "SELECT * FROM items WHERE id=?", (item_id,)
@@ -353,9 +534,7 @@ def get_item(item_id: str) -> Optional[sqlite3.Row]:
 
 
 def row_to_result(row: sqlite3.Row) -> dict:
-    """Reconstruct the result dict (used by result.html) from a DB row."""
     rtype = row["type"]
-
     if rtype == "event":
         data = {
             "title":      row["title"],
@@ -367,17 +546,16 @@ def row_to_result(row: sqlite3.Row) -> dict:
     elif rtype == "task":
         data = {
             "title":    row["title"],
-            "due_date": row["start_date"],   # stored in start_date column
+            "due_date": row["start_date"],
             "priority": row["priority"],
             "notes":    row["notes"],
         }
-    else:  # reminder
+    else:
         data = {
             "title":     row["title"],
             "remind_at": row["remind_at"],
             "notes":     row["notes"],
         }
-
     return {
         "type":       rtype,
         "confidence": row["confidence"] if row["confidence"] is not None else 1.0,
@@ -386,5 +564,5 @@ def row_to_result(row: sqlite3.Row) -> dict:
     }
 
 
-# Initialise on import — CREATE TABLE IF NOT EXISTS is idempotent
+# Initialise on import
 init_db()
