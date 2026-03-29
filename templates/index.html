@@ -359,7 +359,7 @@
         }
         .risk-line {
             display: flex;
-            align-items: baseline;
+            align-items: center;
             gap: 8px;
             padding: 5px 4px;
             border-radius: 7px;
@@ -367,7 +367,7 @@
             transition: background 0.15s;
         }
         .risk-line:hover { background: rgba(255,255,255,0.1); }
-        .risk-line-icon { font-size: 13px; flex-shrink: 0; line-height: 1.5; }
+        .risk-line-icon { font-size: 13px; flex-shrink: 0; }
         .risk-line-body { flex: 1; min-width: 0; }
         .risk-line-text {
             font-size: 13px;
@@ -397,7 +397,7 @@
         }
         .briefing-line {
             display: flex;
-            align-items: baseline;
+            align-items: center;
             gap: 8px;
             padding: 5px 6px;
             border-radius: 7px;
@@ -405,8 +405,9 @@
             transition: background 0.15s;
         }
         .briefing-line:hover { background: rgba(255,255,255,0.1); }
-        .briefing-line-icon { font-size: 13px; flex-shrink: 0; line-height: 1.5; }
+        .briefing-line-icon { font-size: 13px; flex-shrink: 0; }
         .briefing-line-text {
+            flex: 1;
             font-size: 13px;
             color: rgba(255,255,255,0.75);
             font-weight: 500;
@@ -417,6 +418,42 @@
             color: rgba(255,255,255,0.4);
             font-style: italic;
             padding: 2px 6px;
+        }
+
+        /* ── Complete button (circle checkbox) ── */
+        .complete-btn {
+            width: 20px !important;
+            height: 20px !important;
+            min-width: 20px;
+            border-radius: 50% !important;
+            border: 1.5px solid rgba(255,255,255,0.3) !important;
+            background: transparent !important;
+            cursor: pointer;
+            flex-shrink: 0;
+            padding: 0 !important;
+            box-shadow: none !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 11px;
+            color: transparent;
+            transition: all 0.18s !important;
+            transform: none !important;
+            margin-left: auto;
+        }
+        .complete-btn:hover {
+            border-color: rgba(255,255,255,0.8) !important;
+            background: rgba(255,255,255,0.12) !important;
+            color: rgba(255,255,255,0.8);
+            transform: none !important;
+        }
+        .risk-card .complete-btn {
+            border-color: rgba(255,200,80,0.4) !important;
+        }
+        .risk-card .complete-btn:hover {
+            border-color: rgba(255,210,80,0.9) !important;
+            background: rgba(255,210,80,0.12) !important;
+            color: rgba(255,220,80,0.9);
         }
 
         /* ── Reminder banner ── */
@@ -657,13 +694,16 @@
                 <span class="risk-title">⚠️ Don't Miss</span>
             </div>
             {% for item in risk_items %}
-            <a href="/history/{{ item.id }}" class="risk-line">
+            <div class="risk-line" id="row-{{ item.id }}">
                 <span class="risk-line-icon">{{ item.icon }}</span>
-                <span class="risk-line-body">
+                <a href="/history/{{ item.id }}" class="risk-line-body" style="text-decoration:none;">
                     <span class="risk-line-text">{{ item.text }}</span>
                     <span class="risk-line-when">{{ item.when }}</span>
-                </span>
-            </a>
+                </a>
+                {% if item.type in ('task', 'reminder') %}
+                <button class="complete-btn" onclick="completeItem('{{ item.id }}')" title="Mark done">✓</button>
+                {% endif %}
+            </div>
             {% endfor %}
         </div>
         {% endif %}
@@ -674,10 +714,13 @@
             <div class="briefing-title">· Today</div>
             {% if briefing %}
                 {% for line in briefing %}
-                <a href="/history/{{ line.id }}" class="briefing-line">
+                <div class="briefing-line" id="row-{{ line.id }}">
                     <span class="briefing-line-icon">{{ line.icon }}</span>
-                    <span class="briefing-line-text">{{ line.text }}</span>
-                </a>
+                    <a href="/history/{{ line.id }}" class="briefing-line-text" style="text-decoration:none;color:inherit;">{{ line.text }}</a>
+                    {% if line.type in ('task', 'reminder') %}
+                    <button class="complete-btn" onclick="completeItem('{{ line.id }}')" title="Mark done">✓</button>
+                    {% endif %}
+                </div>
                 {% endfor %}
             {% else %}
                 <span class="briefing-empty">Nothing else planned for today</span>
@@ -905,6 +948,23 @@
             el.classList.add('dismissing');
             fetch(`/dismiss-reminder/${el.dataset.id}`, { method: 'POST' });
             setTimeout(() => el.remove(), 420);
+        }
+
+        async function completeItem(id) {
+            const row = document.getElementById(`row-${id}`);
+            if (!row) return;
+            // Optimistic: animate out immediately
+            row.style.transition = 'opacity 0.3s ease, transform 0.3s ease, max-height 0.35s ease';
+            row.style.opacity = '0';
+            row.style.transform = 'translateX(14px)';
+            row.style.maxHeight = row.offsetHeight + 'px';
+            await fetch(`/history/${id}/complete`, { method: 'POST' });
+            setTimeout(() => {
+                row.style.maxHeight = '0';
+                row.style.marginBottom = '0';
+                row.style.padding = '0';
+                setTimeout(() => row.remove(), 350);
+            }, 260);
         }
 
         function focusInput(e) {

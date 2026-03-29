@@ -45,6 +45,7 @@ _MIGRATIONS = [
     ("group_id",             "TEXT"),
     ("group_title",          "TEXT"),
     ("group_summary",        "TEXT"),
+    ("completed",            "INTEGER DEFAULT 0"),
 ]
 
 
@@ -254,9 +255,22 @@ def get_upcoming_items() -> list:
         return con.execute(
             """SELECT * FROM items
                WHERE start_date BETWEEN ? AND ?
+                 AND (completed IS NULL OR completed = 0)
                ORDER BY start_date, time""",
             (today, in3days),
         ).fetchall()
+
+
+def complete_item(item_id: str) -> None:
+    with _conn() as con:
+        con.execute("UPDATE items SET completed=1 WHERE id=?", (item_id,))
+        con.commit()
+
+
+def uncomplete_item(item_id: str) -> None:
+    with _conn() as con:
+        con.execute("UPDATE items SET completed=0 WHERE id=?", (item_id,))
+        con.commit()
 
 
 def delete_item(item_id: str) -> None:

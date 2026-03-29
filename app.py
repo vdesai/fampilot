@@ -16,7 +16,7 @@ from urllib.parse import quote
 from uuid import uuid4
 
 from fastapi import FastAPI, UploadFile, File, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -249,7 +249,8 @@ def _build_risk_items(today_items: list, later_items: list) -> list:
 
         if rtype in ("task", "reminder"):
             icon = "✅" if rtype == "task" else "🔔"
-            risk.append({"icon": icon, "text": title, "when": "due today", "id": row["id"]})
+            risk.append({"icon": icon, "text": title, "when": "due today",
+                         "id": row["id"], "type": rtype})
 
         elif rtype == "event":
             time_str = row["time"] or ""
@@ -272,13 +273,14 @@ def _build_risk_items(today_items: list, later_items: list) -> list:
                         hrs = round(diff_mins / 60, 1)
                         hrs_int = int(hrs)
                         when_label = f"in {hrs_int} hour{'s' if hrs_int != 1 else ''}"
-                    risk.append({"icon": "📅", "text": title, "when": when_label, "id": row["id"]})
+                    risk.append({"icon": "📅", "text": title, "when": when_label,
+                                 "id": row["id"], "type": "event"})
             # Events with no parseable time are not flagged (not urgently missed)
 
     for row in later_items:
         if row["start_date"] == tomorrow and row["type"] == "task" and row["priority"] == "high":
             risk.append({"icon": "✅", "text": row["title"] or "Untitled",
-                         "when": "due tomorrow", "id": row["id"]})
+                         "when": "due tomorrow", "id": row["id"], "type": "task"})
 
     return risk
 
@@ -703,11 +705,12 @@ async def history_detail(request: Request, item_id: str):
     items_store[item_id] = result
 
     context = {
-        "request": request,
-        "result": result,
-        "item_id": item_id,
+        "request":        request,
+        "result":         result,
+        "item_id":        item_id,
         "low_confidence": False,
-        "from_history": True,       # shows Edit + Delete buttons
+        "from_history":   True,
+        "completed":      bool(row["completed"]),
     }
     cal_data = _result_to_calendar_data(result)
     if cal_data:
@@ -774,6 +777,18 @@ async def update_item(
         items_store.pop(item_id)
 
     return RedirectResponse(url=f"/history/{item_id}", status_code=303)
+
+
+@app.post("/history/{item_id}/complete")
+async def complete_item(item_id: str):
+    db.complete_item(item_id)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/history/{item_id}/uncomplete")
+async def uncomplete_item(item_id: str):
+    db.uncomplete_item(item_id)
+    return JSONResponse({"ok": True})
 
 
 @app.post("/history/{item_id}/delete")
