@@ -120,6 +120,28 @@ CREATE TABLE IF NOT EXISTS list_items (
 )
 """
 
+_CREATE_CHORES = """
+CREATE TABLE IF NOT EXISTS chores (
+    id          TEXT PRIMARY KEY,
+    family_id   TEXT NOT NULL REFERENCES families(id),
+    title       TEXT NOT NULL,
+    icon        TEXT DEFAULT '🧹',
+    assigned_to TEXT,
+    recurrence  TEXT DEFAULT 'none',
+    created_at  TEXT NOT NULL
+)
+"""
+
+_CREATE_CHORE_LOG = """
+CREATE TABLE IF NOT EXISTS chore_log (
+    id          TEXT PRIMARY KEY,
+    chore_id    TEXT NOT NULL REFERENCES chores(id),
+    done_by     TEXT,
+    done_date   TEXT NOT NULL,
+    created_at  TEXT NOT NULL
+)
+"""
+
 # Columns added after initial release — ALTER TABLE is idempotent via try/except
 _MIGRATIONS = [
     ("reminder_time",        "TEXT"),
@@ -150,6 +172,8 @@ def init_db() -> None:
         con.execute(_CREATE_INVITE_CODES)
         con.execute(_CREATE_LISTS)
         con.execute(_CREATE_LIST_ITEMS)
+        con.execute(_CREATE_CHORES)
+        con.execute(_CREATE_CHORE_LOG)
         for col, defn in _MIGRATIONS:
             try:
                 con.execute(f"ALTER TABLE items ADD COLUMN {col} {defn}")
@@ -693,6 +717,116 @@ def get_list_summary(family_id: str) -> list:
                ORDER BY l.created_at DESC""",
             (family_id,),
         ).fetchall()
+
+
+# ── Chores ──
+
+def create_chore(chore_id: str, family_id: str, title: str,
+                 icon: str = "🧹", assigned_to: str = "",
+                 recurrence: str = "none") -> None:
+    with _conn() as con:
+        con.execute(
+            """INSERT INTO chores (id, family_id, title, icon, assigned_to, recurrence, created_at)
+               VALUES (?,?,?,?,?,?,?)""",
+            (chore_id, family_id, title, icon, assigned_to, recurrence,
+             datetime.now(timezone.utc).isoformat()),
+        )
+        con.commit()
+
+
+def get_chores(family_id: str) -> list:
+    with _conn() as con:
+        return con.execute(
+            "SELECT * FROM chores WHERE family_id=? ORDER BY created_at",
+            (family_id,),
+        ).fetchall()
+
+
+def get_chore(chore_id: str) -> Optional[sqlite3.Row]:
+    with _conn() as con:
+        return con.execute("SELECT * FROM chores WHERE id=?", (chore_id,)).fetchone()
+
+
+def update_chore(chore_id: str, title: str, assigned_to: str,
+                 recurrence: str, icon: str) -> None:
+    with _conn() as con:
+        con.execute(
+            "UPDATE chores SET title=?, assigned_to=?, recurrence=?, icon=? WHERE id=?",
+            (title, assigned_to, recurrence, icon, chore_id),
+        )
+        con.commit()
+
+
+def delete_chore(chore_id: str) -> None:
+    with _conn() as con:
+        con.execute("DELETE FROM chore_log WHERE chore_id=?", (chore_id,))
+        con.execute("DELETE FROM chores WHERE id=?", (chore_id,))
+        con.commit()
+
+
+def log_chore_done(log_id: str, chore_id: str, done_by: str, done_date: str) -> None:
+    with _conn() as con:
+        con.execute(
+            "INSERT INTO chore_log (id, chore_id, done_by, done_date, created_at) VALUES (?,?,?,?,?)",
+            (log_id, chore_id, done_by, done_date, datetime.now(timezone.utc).isoformat()),
+        )
+        con.commit()
+
+
+def undo_chore_done(chore_id: str, done_date: str) -> None:
+    with _conn() as con:
+        con.execute(
+            "DELETE FROM chore_log WHERE chore_id=? AND done_date=?",
+            (chore_id, done_date),
+        )
+        con.commit()
+
+
+def get_chore_log_for_date(family_id: str, target_date: str) -> list:
+    """Return all chore log entries for a given date for this family."""
+    with _conn() as con:
+        return con.execute(
+            """SELECT cl.*, c.title, c.icon, c.assigned_to
+               FROM chore_log cl
+               JOIN chores c ON c.id = cl.chore_id
+               WHERE c.family_id = ? AND cl.done_date = ?""",
+            (family_id, target_date),
+        ).fetchall()
+
+
+def get_chores_with_status(family_id: str, target_date: str) -> list:
+    """Return all chores for the family, with done status for the given date."""
+    with _conn() as con:
+        return con.execute(
+            """SELECT c.*,
+                      CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS done_today,
+                      cl.done_by
+               FROM chores c
+               LEFT JOIN chore_log cl
+                    ON cl.chore_id = c.id AND cl.done_date = ?
+               WHERE c.family_id = ?
+               ORDER BY c.assigned_to, c.title""",
+            (target_date, family_id),
+        ).fetchall()
+
+
+def get_chore_streak(chore_id: str, today: str) -> int:
+    """Count consecutive days (up to today) that a chore was done."""
+    with _conn() as con:
+        rows = con.execute(
+            "SELECT DISTINCT done_date FROM chore_log WHERE chore_id=? ORDER BY done_date DESC",
+            (chore_id,),
+        ).fetchall()
+    if not rows:
+        return 0
+    dates = [r["done_date"] for r in rows]
+    streak = 0
+    check = today
+    while check in dates:
+        streak += 1
+        d = date.fromisoformat(check)
+        check = (d - timedelta(days=1)).isoformat()
+    return streak
 
 
 # Initialise on import

@@ -1126,6 +1126,74 @@ async def delete_list_route(request: Request, list_id: str):
     return RedirectResponse(url="/lists", status_code=303)
 
 
+# ── Chores ──
+
+@app.get("/chores", response_class=HTMLResponse)
+async def chores_page(request: Request):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+    today_str = _local_today().isoformat()
+    chores = db.get_chores_with_status(auth["family_id"], today_str)
+    members = db.get_family_members(auth["family_id"])
+    return templates.TemplateResponse(request, "chores.html", {
+        "request": request,
+        "chores": chores,
+        "members": members,
+        "today_str": today_str,
+        "nav_page": "chores",
+        "auth": auth,
+    })
+
+
+@app.post("/chores/create")
+async def create_chore_route(request: Request,
+                              title: str = Form(...),
+                              assigned_to: str = Form(""),
+                              recurrence: str = Form("daily"),
+                              icon: str = Form("🧹")):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+    chore_id = str(uuid4())
+    db.create_chore(chore_id, auth["family_id"], title.strip(),
+                    icon=icon, assigned_to=assigned_to, recurrence=recurrence)
+    return RedirectResponse(url="/chores", status_code=303)
+
+
+@app.post("/chores/{chore_id}/done")
+async def mark_chore_done(request: Request, chore_id: str):
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    today_str = _local_today().isoformat()
+    log_id = str(uuid4())
+    db.log_chore_done(log_id, chore_id, auth["display_name"], today_str)
+    streak = db.get_chore_streak(chore_id, today_str)
+    return JSONResponse({"ok": True, "streak": streak})
+
+
+@app.post("/chores/{chore_id}/undo")
+async def undo_chore(request: Request, chore_id: str):
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    today_str = _local_today().isoformat()
+    db.undo_chore_done(chore_id, today_str)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/chores/{chore_id}/delete")
+async def delete_chore_route(request: Request, chore_id: str):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+    chore = db.get_chore(chore_id)
+    if chore and chore["family_id"] == auth["family_id"]:
+        db.delete_chore(chore_id)
+    return RedirectResponse(url="/chores", status_code=303)
+
+
 # ── Voice / AI agent routes ──
 
 @app.post("/api/voice-to-items")
