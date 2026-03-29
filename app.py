@@ -201,6 +201,22 @@ async def join_by_code(request: Request, code: str = Form(...)):
     return RedirectResponse(url=f"/join/{code}", status_code=303)
 
 
+@app.get("/invite-qr/{code}")
+async def invite_qr(request: Request, code: str):
+    """Generate a QR code PNG for an invite link."""
+    import segno
+    import io
+    from fastapi.responses import StreamingResponse
+
+    url = f"{_base_url(request)}/join/{code.upper()}"
+
+    qr = segno.make(url)
+    buf = io.BytesIO()
+    qr.save(buf, kind="png", scale=8, border=2, dark="#667eea")
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="image/png")
+
+
 @app.post("/settings/regenerate-invite")
 async def regenerate_invite(request: Request):
     """Generate a new invite code for the family."""
