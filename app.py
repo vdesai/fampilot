@@ -750,7 +750,7 @@ async def family_view(request: Request, token: str):
                 cal_url = generate_google_calendar_url(cal_data)
             day_items.append({"row": row, "cal_url": cal_url})
 
-        days.append({"label": label, "date": d_str, "items": day_items})
+        days.append({"label": label, "date": d_str, "entries": day_items})
 
     return templates.TemplateResponse(request, "family.html", {
         "request":   request,
