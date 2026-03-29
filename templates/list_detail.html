@@ -17,58 +17,68 @@
 
         /* Header */
         .list-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px 20px 24px;
+            background: linear-gradient(135deg, #4a63d2 0%, #5c3d8f 100%);
+            padding: 16px 16px 20px;
+        }
+        .list-header-inner {
+            max-width: 540px;
+            margin: 0 auto;
         }
         .list-header-top {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 10px;
+            margin-bottom: 14px;
         }
         .back-btn {
-            color: rgba(255,255,255,0.8);
+            color: white;
             text-decoration: none;
-            font-size: 24px;
+            font-size: 28px;
             line-height: 1;
-            padding: 4px;
+            padding: 4px 2px;
+            flex-shrink: 0;
         }
-        .back-btn:hover { color: white; }
         .list-title {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 700;
             color: white;
             flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        .list-title-icon { margin-right: 8px; }
+        .list-title-icon { margin-right: 6px; }
         .delete-btn {
             color: rgba(255,255,255,0.5);
             background: none;
             border: none;
-            font-size: 14px;
+            font-size: 13px;
             cursor: pointer;
             padding: 6px 10px;
             border-radius: 6px;
             transition: all 0.15s;
+            flex-shrink: 0;
         }
         .delete-btn:hover {
             color: #ff6b6b;
             background: rgba(255,255,255,0.1);
         }
 
-        /* Add item bar */
+        /* Add item bar — input on top, buttons below */
         .add-bar {
             display: flex;
-            gap: 8px;
+            flex-direction: column;
+            gap: 10px;
         }
         .add-input {
-            flex: 1;
+            width: 100%;
             padding: 14px 16px;
             border: none;
             border-radius: 12px;
             font-size: 16px;
             font-family: inherit;
-            background: rgba(255,255,255,0.95);
+            background: white;
             color: #333;
         }
         .add-input:focus {
@@ -76,31 +86,30 @@
             box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
         }
         .add-input::placeholder { color: #aaa; }
+
+        .input-actions {
+            display: flex;
+            gap: 8px;
+        }
         .add-btn {
-            padding: 14px 18px;
+            flex: 1;
+            padding: 12px;
             border: none;
-            border-radius: 12px;
-            font-size: 20px;
+            border-radius: 10px;
+            font-size: 15px;
             font-weight: 700;
             background: white;
             color: #667eea;
             cursor: pointer;
-            line-height: 1;
             transition: transform 0.15s;
         }
         .add-btn:hover { transform: translateY(-1px); }
-
-        /* Voice + Camera buttons */
-        .input-actions {
-            display: flex;
-            gap: 6px;
-        }
         .action-btn {
-            width: 50px;
-            height: 50px;
+            width: 48px;
+            height: 48px;
             border: none;
-            border-radius: 12px;
-            font-size: 22px;
+            border-radius: 10px;
+            font-size: 20px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -110,7 +119,7 @@
         }
         .action-btn:hover { transform: translateY(-1px); }
         .mic-btn {
-            background: white;
+            background: rgba(255,255,255,0.9);
             color: #667eea;
         }
         .mic-btn.listening {
@@ -123,7 +132,7 @@
             50% { transform: scale(1.08); }
         }
         .cam-btn {
-            background: rgba(255,255,255,0.85);
+            background: rgba(255,255,255,0.9);
             color: #667eea;
         }
         .cam-btn input { display: none; }
@@ -314,30 +323,32 @@
     {% include "_nav.html" %}
 
     <div class="list-header">
-        <div class="list-header-top" style="max-width:540px;margin:0 auto;">
-            <a href="/lists" class="back-btn">‹</a>
-            <div class="list-title">
-                <span class="list-title-icon">{{ list.icon }}</span>{{ list.name }}
+        <div class="list-header-inner">
+            <div class="list-header-top">
+                <a href="/lists" class="back-btn">‹</a>
+                <div class="list-title">
+                    <span class="list-title-icon">{{ list.icon }}</span>{{ list.name }}
+                </div>
+                <form action="/lists/{{ list.id }}/delete" method="post"
+                      onsubmit="return confirm('Delete this list and all its items?')">
+                    <button type="submit" class="delete-btn">Delete</button>
+                </form>
             </div>
-            <form action="/lists/{{ list.id }}/delete" method="post"
-                  onsubmit="return confirm('Delete this list and all its items?')">
-                <button type="submit" class="delete-btn">Delete</button>
-            </form>
-        </div>
-        <div class="add-bar" style="max-width:540px;margin:0 auto;">
-            <input type="text" id="addInput" class="add-input"
-                   placeholder="Type, speak, or snap a photo..."
-                   autofocus>
-            <div class="input-actions">
-                <button type="button" class="add-btn" onclick="addItems()">+</button>
-                <button type="button" class="action-btn mic-btn" id="micBtn" onclick="toggleMic()" title="Speak items">🎙️</button>
-                <label class="action-btn cam-btn" title="Scan items from photo">
-                    📷
-                    <input type="file" id="camInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
-                </label>
+            <div class="add-bar">
+                <input type="text" id="addInput" class="add-input"
+                       placeholder="Add items..."
+                       autofocus>
+                <div class="input-actions">
+                    <button type="button" class="add-btn" onclick="addItems()">+ Add</button>
+                    <button type="button" class="action-btn mic-btn" id="micBtn" onclick="toggleMic()" title="Speak items">🎙️</button>
+                    <label class="action-btn cam-btn" title="Scan items from photo">
+                        📷
+                        <input type="file" id="camInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+                    </label>
+                </div>
             </div>
+            <div class="voice-feedback" id="voiceFeedback"></div>
         </div>
-        <div class="voice-feedback" id="voiceFeedback"></div>
     </div>
 
     <div class="content">
