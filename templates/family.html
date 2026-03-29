@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Week – FamPilot</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 28px 20px 24px;
+            text-align: center;
+        }
+        .header-brand {
+            font-size: 14px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.7);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .header-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
+        }
+        .header-sub {
+            font-size: 14px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* ── Content ── */
+        .content {
+            max-width: 540px;
+            margin: 0 auto;
+            padding: 20px 16px 60px;
+        }
+
+        /* ── Day section ── */
+        .day-section { margin-bottom: 24px; }
+
+        .day-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #888;
+            margin-bottom: 8px;
+            padding-left: 2px;
+        }
+        .day-label.today { color: #667eea; }
+
+        /* ── Item card ── */
+        .item-card {
+            background: white;
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .item-card:last-child { margin-bottom: 0; }
+
+        .item-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .item-body { flex: 1; min-width: 0; }
+
+        .item-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 3px;
+            line-height: 1.3;
+        }
+
+        .item-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .item-time {
+            font-size: 13px;
+            color: #667eea;
+            font-weight: 600;
+        }
+        .item-location {
+            font-size: 13px;
+            color: #888;
+        }
+        .item-location::before { content: '·'; margin-right: 6px; }
+
+        .item-priority {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .priority-high   { background: #ffebee; color: #c62828; }
+        .priority-medium { background: #fff3e0; color: #e65100; }
+        .priority-low    { background: #e8f5e9; color: #2e7d32; }
+
+        .item-notes {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        /* ── Add to calendar chip ── */
+        .cal-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #43a047;
+            background: #e8f5e9;
+            border-radius: 20px;
+            padding: 4px 10px;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .cal-chip:hover { background: #c8e6c9; }
+
+        /* ── Type stripe ── */
+        .item-card.type-event    { border-left: 3px solid #667eea; }
+        .item-card.type-task     { border-left: 3px solid #fb8c00; }
+        .item-card.type-reminder { border-left: 3px solid #1e88e5; }
+
+        /* ── Empty state ── */
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; }
+        .empty-title { font-size: 20px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .empty-sub { font-size: 14px; color: #888; }
+
+        /* ── Invalid token ── */
+        .invalid {
+            text-align: center;
+            padding: 80px 20px;
+        }
+        .invalid-icon { font-size: 48px; margin-bottom: 16px; }
+        .invalid-title { font-size: 20px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .invalid-sub { font-size: 14px; color: #888; }
+
+        /* ── Footer ── */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(245,245,247,0.92);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid rgba(0,0,0,0.06);
+        }
+        .footer-text {
+            font-size: 12px;
+            color: #aaa;
+        }
+        .footer-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .footer-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-brand">FamPilot</div>
+    <div class="header-title">👨‍👩‍👧‍👦 Family Week</div>
+    <div class="header-sub">What's coming up for your family</div>
+</div>
+
+<div class="content">
+
+{% if invalid %}
+    <div class="invalid">
+        <div class="invalid-icon">🔒</div>
+        <div class="invalid-title">Link not found</div>
+        <div class="invalid-sub">This family link has expired or doesn't exist.</div>
+    </div>
+
+{% elif not has_items %}
+    <div class="empty">
+        <div class="empty-icon">📭</div>
+        <div class="empty-title">Nothing planned yet</div>
+        <div class="empty-sub">Add events, tasks and reminders in FamPilot<br>and they'll show up here.</div>
+    </div>
+
+{% else %}
+    {% for day in days %}
+    <div class="day-section">
+        <div class="day-label {% if day.label == 'Today' %}today{% endif %}">
+            {{ day.label }}
+        </div>
+
+        {% for entry in day.items %}
+        {% set row = entry.row %}
+        <div class="item-card type-{{ row.type }}">
+            <span class="item-icon">
+                {% if row.type == 'event' %}📅
+                {% elif row.type == 'task' %}✅
+                {% else %}🔔{% endif %}
+            </span>
+            <div class="item-body">
+                <div class="item-title">{{ row.title or "Untitled" }}</div>
+                <div class="item-meta">
+                    {% if row.time %}
+                    <span class="item-time">{{ row.time }}</span>
+                    {% endif %}
+                    {% if row.location %}
+                    <span class="item-location">{{ row.location }}</span>
+                    {% endif %}
+                    {% if row.type == 'task' and row.priority %}
+                    <span class="item-priority priority-{{ row.priority }}">{{ row.priority }}</span>
+                    {% endif %}
+                    {% if row.type == 'reminder' and row.remind_at %}
+                    <span class="item-location">{{ row.remind_at }}</span>
+                    {% endif %}
+                </div>
+                {% if row.notes %}
+                <div class="item-notes">{{ row.notes }}</div>
+                {% endif %}
+                {% if row.type == 'event' and entry.cal_url %}
+                <a href="{{ entry.cal_url }}" target="_blank" class="cal-chip">
+                    + Add to Calendar
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+{% endif %}
+
+</div>
+
+<div class="footer">
+    <div class="footer-text">
+        Shared via <a href="/" class="footer-link">FamPilot</a> &nbsp;·&nbsp;
+        <a href="/" class="footer-link">Create your family's page →</a>
+    </div>
+</div>
+
+</body>
+</html>

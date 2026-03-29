@@ -335,6 +335,54 @@
             flex: 1;
         }
 
+        /* ── Family share widget ── */
+        .share-widget {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.12);
+            border: 1.5px solid rgba(255,255,255,0.22);
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+            backdrop-filter: blur(6px);
+        }
+        .share-icon { font-size: 18px; flex-shrink: 0; }
+        .share-info { flex: 1; min-width: 0; }
+        .share-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.55);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+        .share-url {
+            font-size: 12px;
+            color: rgba(255,255,255,0.8);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-family: monospace;
+        }
+        .share-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .share-btn {
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            padding: 5px 12px !important;
+            border-radius: 7px !important;
+            border: 1.5px solid rgba(255,255,255,0.3) !important;
+            background: rgba(255,255,255,0.12) !important;
+            color: rgba(255,255,255,0.85) !important;
+            cursor: pointer;
+            width: auto !important;
+            box-shadow: none !important;
+            transition: background 0.15s !important;
+            transform: none !important;
+        }
+        .share-btn:hover { background: rgba(255,255,255,0.22) !important; }
+        .share-btn.copied { background: rgba(40,167,69,0.35) !important; border-color: rgba(40,167,69,0.5) !important; color: #90ee90 !important; }
+
         /* ── Risk / Don't Miss ── */
         .risk-card {
             background: linear-gradient(135deg, rgba(255,180,60,0.18) 0%, rgba(255,140,40,0.10) 100%);
@@ -687,6 +735,19 @@
         </div>
         {% endfor %}
 
+        <!-- Family share widget -->
+        <div class="share-widget">
+            <span class="share-icon">👨‍👩‍👧‍👦</span>
+            <div class="share-info">
+                <div class="share-label">Family link</div>
+                <div class="share-url" id="familyUrl">{{ family_url }}</div>
+            </div>
+            <div class="share-actions">
+                <button class="share-btn" id="copyBtn" onclick="copyFamilyLink()">Copy</button>
+                <a href="{{ family_url }}" target="_blank" class="share-btn" style="text-decoration:none;">View</a>
+            </div>
+        </div>
+
         <!-- Don't Miss (only shown when there are risk items) -->
         {% if risk_items %}
         <div class="risk-card">
@@ -948,6 +1009,15 @@
             el.classList.add('dismissing');
             fetch(`/dismiss-reminder/${el.dataset.id}`, { method: 'POST' });
             setTimeout(() => el.remove(), 420);
+        }
+
+        async function copyFamilyLink() {
+            const url = document.getElementById('familyUrl').textContent.trim();
+            await navigator.clipboard.writeText(url);
+            const btn = document.getElementById('copyBtn');
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
         }
 
         async function completeItem(id) {

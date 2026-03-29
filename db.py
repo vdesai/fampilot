@@ -15,6 +15,13 @@ from typing import Optional
 
 DB_PATH = os.getenv("DB_PATH", "fampilot.db")
 
+_CREATE_SETTINGS = """
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+)
+"""
+
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS items (
     id                  TEXT PRIMARY KEY,
@@ -58,6 +65,7 @@ def _conn() -> sqlite3.Connection:
 def init_db() -> None:
     """Create tables and run column migrations. Safe to call multiple times."""
     with _conn() as con:
+        con.execute(_CREATE_SETTINGS)
         con.execute(_CREATE_TABLE)
         for col, defn in _MIGRATIONS:
             try:
@@ -65,6 +73,42 @@ def init_db() -> None:
             except sqlite3.OperationalError:
                 pass  # column already exists
         con.commit()
+
+
+def get_setting(key: str) -> Optional[str]:
+    with _conn() as con:
+        row = con.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+        return row["value"] if row else None
+
+
+def set_setting(key: str, value: str) -> None:
+    with _conn() as con:
+        con.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?,?)", (key, value))
+        con.commit()
+
+
+def get_or_create_family_token() -> str:
+    import secrets
+    token = get_setting("family_token")
+    if not token:
+        token = secrets.token_urlsafe(12)
+        set_setting("family_token", token)
+    return token
+
+
+def get_family_week() -> list:
+    """All non-completed items from today through the next 7 days."""
+    from datetime import date, timedelta
+    today   = date.today().isoformat()
+    in7days = (date.today() + timedelta(days=7)).isoformat()
+    with _conn() as con:
+        return con.execute(
+            """SELECT * FROM items
+               WHERE start_date BETWEEN ? AND ?
+                 AND (completed IS NULL OR completed = 0)
+               ORDER BY start_date, time""",
+            (today, in7days),
+        ).fetchall()
 
 
 def save_item(item_id: str, result: dict,

@@ -305,6 +305,13 @@ def _build_daily_briefing(today_items: list) -> list:
     return lines
 
 
+def _base_url(request: Request) -> str:
+    """Return the public base URL, respecting X-Forwarded-Proto on Render."""
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host  = request.headers.get("x-forwarded-host", request.url.netloc)
+    return f"{proto}://{host}"
+
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Render the home page with upload form and upcoming items."""
@@ -317,6 +324,9 @@ async def home(request: Request):
     risk_ids   = {item["id"] for item in risk_items}
     briefing   = [b for b in _build_daily_briefing(today_items) if b["id"] not in risk_ids]
 
+    family_token = db.get_or_create_family_token()
+    family_url   = f"{_base_url(request)}/family/{family_token}"
+
     return templates.TemplateResponse(request, "index.html", {
         "request":             request,
         "nav_page":            "home",
@@ -326,6 +336,7 @@ async def home(request: Request):
         "later_items":         later_items[:3],
         "later_total":         len(later_items),
         "triggered_reminders": db.get_recent_reminders(),
+        "family_url":          family_url,
     })
 
 
@@ -678,6 +689,70 @@ async def save_batch(request: Request, batch_id: str):
 
     batch_store.pop(batch_id, None)
     return RedirectResponse(url="/history", status_code=303)
+
+
+@app.get("/family/{token}", response_class=HTMLResponse)
+async def family_view(request: Request, token: str):
+    """Shared read-only family week view — no login required."""
+    stored = db.get_setting("family_token")
+    if not stored or token != stored:
+        return templates.TemplateResponse(request, "family.html", {
+            "request": request, "invalid": True, "days": [], "has_items": False,
+        })
+
+    from datetime import date, timedelta
+    from collections import defaultdict
+
+    today = date.today()
+    rows  = db.get_family_week()
+
+    by_date: dict = defaultdict(list)
+    for row in rows:
+        by_date[row["start_date"]].append(row)
+
+    days = []
+    for i in range(8):
+        d     = today + timedelta(days=i)
+        d_str = d.isoformat()
+        if d_str not in by_date:
+            continue
+        if i == 0:
+            label = "Today"
+        elif i == 1:
+            label = "Tomorrow"
+        else:
+            label = d.strftime("%A, %b %-d")
+
+        day_items = []
+        for row in by_date[d_str]:
+            cal_url = ""
+            if row["type"] == "event":
+                cal_data = {
+                    "title":      row["title"],
+                    "start_date": row["start_date"],
+                    "end_date":   row["end_date"],
+                    "time":       row["time"],
+                    "location":   row["location"],
+                }
+                cal_url = generate_google_calendar_url(cal_data)
+            day_items.append({"row": row, "cal_url": cal_url})
+
+        days.append({"label": label, "date": d_str, "items": day_items})
+
+    return templates.TemplateResponse(request, "family.html", {
+        "request":   request,
+        "invalid":   False,
+        "days":      days,
+        "has_items": bool(rows),
+    })
+
+
+@app.post("/settings/regenerate-link")
+async def regenerate_family_link(request: Request):
+    """Generate a new family token, invalidating the old link."""
+    import secrets
+    db.set_setting("family_token", secrets.token_urlsafe(12))
+    return RedirectResponse(url="/", status_code=303)
 
 
 @app.get("/history", response_class=HTMLResponse)
