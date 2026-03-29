@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meal Plan – FamPilot</title>
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/static/manifest.json">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #4a63d2 0%, #5c3d8f 100%);
+            padding: 20px 16px 24px;
+        }
+        .page-header-inner {
+            max-width: 540px;
+            margin: 0 auto;
+        }
+        .page-title { font-size: 24px; font-weight: 700; color: white; margin-bottom: 4px; }
+        .page-sub { font-size: 14px; color: rgba(255,255,255,0.7); }
+
+        .content {
+            max-width: 540px;
+            margin: 0 auto;
+            padding: 16px 16px 120px;
+        }
+
+        /* Generate form */
+        .gen-card {
+            background: white;
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+        }
+        .gen-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .gen-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .gen-select, .gen-input {
+            flex: 1;
+            padding: 12px 14px;
+            border: 2px solid #e8e8e8;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            color: #333;
+            background: white;
+        }
+        .gen-select:focus, .gen-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .gen-input::placeholder { color: #bbb; }
+        .gen-presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+        .gen-preset {
+            padding: 6px 12px;
+            border: 1.5px solid #e8e8e8;
+            border-radius: 20px;
+            background: #fafafa;
+            font-size: 13px;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.15s;
+        }
+        .gen-preset:hover, .gen-preset.active {
+            border-color: #667eea;
+            background: #f0f2ff;
+            color: #667eea;
+        }
+        .gen-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            transition: transform 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .gen-btn:hover { transform: translateY(-1px); }
+        .gen-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .gen-btn .spinner {
+            display: none;
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .gen-btn.loading .spinner { display: block; }
+        .gen-btn.loading .btn-label { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Message */
+        .msg {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+        .msg-error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        /* Day cards */
+        .day-card {
+            background: white;
+            border-radius: 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+            overflow: hidden;
+        }
+        .day-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 12px 18px;
+            font-size: 16px;
+            font-weight: 700;
+            color: white;
+        }
+        .day-meals { padding: 6px 0; }
+        .meal-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 18px;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        .meal-row:last-child { border-bottom: none; }
+        .meal-type {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #aaa;
+            width: 65px;
+            flex-shrink: 0;
+        }
+        .meal-name {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 500;
+            color: #333;
+        }
+        .meal-time {
+            font-size: 12px;
+            color: #999;
+            flex-shrink: 0;
+        }
+
+        /* Grocery section */
+        .grocery-card {
+            background: white;
+            border-radius: 14px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+        }
+        .grocery-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .grocery-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+        .grocery-chip {
+            padding: 6px 12px;
+            background: #f8f9ff;
+            border: 1px solid #e8e8f0;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #555;
+        }
+        .grocery-count {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 12px;
+        }
+        .grocery-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .grocery-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .grocery-btn:hover { transform: translateY(-1px); }
+        .grocery-btn-primary {
+            background: #43a047;
+            color: white;
+        }
+        .grocery-btn-secondary {
+            background: #f0f2ff;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="page-header">
+        <div class="page-header-inner">
+            <div class="page-title">Meal Planner</div>
+            <div class="page-sub">AI-powered weekly meals for the family</div>
+        </div>
+    </div>
+
+    <div class="content">
+        {% if message %}
+        <div class="msg">{{ message }}</div>
+        {% endif %}
+        {% if error %}
+        <div class="msg msg-error">{{ error }}</div>
+        {% endif %}
+
+        <!-- Generate form -->
+        <div class="gen-card">
+            <form action="/meals/generate" method="post" id="genForm">
+                <label class="gen-label">How many days?</label>
+                <div class="gen-row">
+                    <select name="days" class="gen-select">
+                        <option value="3">3 days</option>
+                        <option value="5">5 days (weekdays)</option>
+                        <option value="7" selected>7 days (full week)</option>
+                    </select>
+                </div>
+
+                <label class="gen-label">Dietary preferences (optional)</label>
+                <div class="gen-presets" id="presets">
+                    <span class="gen-preset" onclick="togglePref(this, 'vegetarian')">🥬 Vegetarian</span>
+                    <span class="gen-preset" onclick="togglePref(this, 'kid-friendly')">🧒 Kid-Friendly</span>
+                    <span class="gen-preset" onclick="togglePref(this, 'quick meals')">⏱️ Quick (&lt;30 min)</span>
+                    <span class="gen-preset" onclick="togglePref(this, 'budget-friendly')">💰 Budget</span>
+                    <span class="gen-preset" onclick="togglePref(this, 'high-protein')">💪 High Protein</span>
+                    <span class="gen-preset" onclick="togglePref(this, 'no dairy')">🥛 Dairy-Free</span>
+                    <span class="gen-preset" onclick="togglePref(this, 'no gluten')">🌾 Gluten-Free</span>
+                </div>
+                <input type="hidden" name="preferences" id="prefInput" value="">
+
+                <button type="submit" class="gen-btn" id="genBtn">
+                    <span class="spinner"></span>
+                    <span class="btn-label">🍳 Generate Meal Plan</span>
+                </button>
+            </form>
+        </div>
+
+        {% if meals %}
+        <!-- Meal plan -->
+        {% for day in meals.days %}
+        <div class="day-card">
+            <div class="day-header">{{ day.day }}</div>
+            <div class="day-meals">
+                {% if day.breakfast %}
+                <div class="meal-row">
+                    <span class="meal-type">Breakfast</span>
+                    <span class="meal-name">{{ day.breakfast.name }}</span>
+                    {% if day.breakfast.time %}<span class="meal-time">{{ day.breakfast.time }}</span>{% endif %}
+                </div>
+                {% endif %}
+                {% if day.lunch %}
+                <div class="meal-row">
+                    <span class="meal-type">Lunch</span>
+                    <span class="meal-name">{{ day.lunch.name }}</span>
+                    {% if day.lunch.time %}<span class="meal-time">{{ day.lunch.time }}</span>{% endif %}
+                </div>
+                {% endif %}
+                {% if day.dinner %}
+                <div class="meal-row">
+                    <span class="meal-type">Dinner</span>
+                    <span class="meal-name">{{ day.dinner.name }}</span>
+                    {% if day.dinner.time %}<span class="meal-time">{{ day.dinner.time }}</span>{% endif %}
+                </div>
+                {% endif %}
+                {% if day.snack %}
+                <div class="meal-row">
+                    <span class="meal-type">Snack</span>
+                    <span class="meal-name">{{ day.snack.name }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Grocery list from meal plan -->
+        {% if meals.grocery_list %}
+        <div class="grocery-card">
+            <div class="grocery-title">🛒 Grocery List</div>
+            <div class="grocery-count">{{ meals.grocery_list|length }} items needed</div>
+            <div class="grocery-items">
+                {% for item in meals.grocery_list %}
+                <span class="grocery-chip">{{ item }}</span>
+                {% endfor %}
+            </div>
+            <div class="grocery-actions">
+                <button class="grocery-btn grocery-btn-primary" onclick="addToList('')" id="addBtn">
+                    + Add All to New List
+                </button>
+                {% if lists %}
+                <button class="grocery-btn grocery-btn-secondary" onclick="showListPicker()">
+                    Add to Existing
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Hidden list picker -->
+            <div id="listPicker" style="display:none; margin-top: 12px;">
+                <select id="listSelect" class="gen-select" style="width:100%; margin-bottom:8px;">
+                    {% for lst in lists %}
+                    <option value="{{ lst.id }}">{{ lst.icon }} {{ lst.name }}</option>
+                    {% endfor %}
+                </select>
+                <button class="grocery-btn grocery-btn-primary" style="width:100%;"
+                        onclick="addToList(document.getElementById('listSelect').value)">
+                    Add Items
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+
+    <script>
+        const prefs = new Set();
+
+        function togglePref(el, pref) {
+            if (prefs.has(pref)) {
+                prefs.delete(pref);
+                el.classList.remove('active');
+            } else {
+                prefs.add(pref);
+                el.classList.add('active');
+            }
+            document.getElementById('prefInput').value = Array.from(prefs).join(', ');
+        }
+
+        document.getElementById('genForm').addEventListener('submit', () => {
+            const btn = document.getElementById('genBtn');
+            btn.classList.add('loading');
+            btn.disabled = true;
+        });
+
+        const groceryItems = {{ meals.grocery_list | tojson if meals and meals.grocery_list else '[]' }};
+
+        function showListPicker() {
+            document.getElementById('listPicker').style.display = 'block';
+        }
+
+        async function addToList(listId) {
+            const btn = document.getElementById('addBtn');
+            btn.textContent = 'Adding...';
+            btn.disabled = true;
+
+            const res = await fetch('/meals/add-to-list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `list_id=${encodeURIComponent(listId)}&items_json=${encodeURIComponent(JSON.stringify(groceryItems))}`,
+            });
+            const data = await res.json();
+
+            if (data.ok) {
+                btn.textContent = `Added ${data.count} items!`;
+                btn.style.background = '#43a047';
+                setTimeout(() => {
+                    window.location.href = `/lists/${data.list_id}`;
+                }, 1000);
+            } else {
+                btn.textContent = 'Failed — try again';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

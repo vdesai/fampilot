@@ -1211,6 +1211,144 @@ async def delete_chore_route(request: Request, chore_id: str):
     return RedirectResponse(url="/chores", status_code=303)
 
 
+# ── Meal Planning ──
+
+@app.get("/meals", response_class=HTMLResponse)
+async def meals_page(request: Request):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+    plan = db.get_latest_meal_plan(auth["family_id"])
+    meals = json.loads(plan["meals_json"]) if plan else None
+    lists = db.get_lists(auth["family_id"])
+    return templates.TemplateResponse(request, "meals.html", {
+        "request": request,
+        "plan": plan,
+        "meals": meals,
+        "lists": lists,
+        "nav_page": "meals",
+        "auth": auth,
+    })
+
+
+@app.post("/meals/generate")
+async def generate_meal_plan(request: Request,
+                              days: int = Form(7),
+                              preferences: str = Form("")):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        return templates.TemplateResponse(request, "meals.html", {
+            "request": request, "plan": None, "meals": None,
+            "lists": [], "nav_page": "meals", "auth": auth,
+            "error": "ANTHROPIC_API_KEY not set.",
+        })
+
+    family_id = auth["family_id"]
+    members = db.get_family_members(family_id)
+    member_count = len(members)
+
+    from anthropic import Anthropic
+    client = Anthropic(api_key=api_key)
+    msg = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=2048,
+        messages=[{"role": "user", "content": f"""Generate a {days}-day family meal plan.
+
+Family size: {member_count} people
+Preferences/restrictions: {preferences or 'None specified'}
+
+Return ONLY a JSON object with this structure:
+{{
+  "days": [
+    {{
+      "day": "Monday",
+      "breakfast": {{"name": "...", "time": "15 min"}},
+      "lunch": {{"name": "...", "time": "20 min"}},
+      "dinner": {{"name": "...", "time": "30 min"}},
+      "snack": {{"name": "..."}}
+    }}
+  ],
+  "grocery_list": ["item 1", "item 2", ...]
+}}
+
+Rules:
+- Practical, family-friendly meals (not fancy restaurant dishes)
+- Vary cuisines across the week
+- Include prep time estimates
+- The grocery list should include ALL ingredients needed, organized logically
+- Assume a basic pantry (salt, pepper, oil, common spices already available)
+- Keep it realistic for busy parents
+"""}],
+    )
+
+    try:
+        from main import clean_json_response
+        cleaned = clean_json_response(msg.content[0].text)
+        meals = json.loads(cleaned)
+    except Exception:
+        return templates.TemplateResponse(request, "meals.html", {
+            "request": request, "plan": None, "meals": None,
+            "lists": [], "nav_page": "meals", "auth": auth,
+            "error": "Failed to generate meal plan. Please try again.",
+        })
+
+    plan_id = str(uuid4())
+    db.save_meal_plan(plan_id, family_id, json.dumps(meals),
+                      days=days, preferences=preferences)
+
+    lists = db.get_lists(family_id)
+    return templates.TemplateResponse(request, "meals.html", {
+        "request": request,
+        "plan": {"id": plan_id},
+        "meals": meals,
+        "lists": lists,
+        "nav_page": "meals",
+        "auth": auth,
+        "message": f"Generated a {days}-day meal plan!",
+    })
+
+
+@app.post("/meals/add-to-list")
+async def meals_add_to_list(request: Request,
+                             list_id: str = Form(""),
+                             items_json: str = Form("[]")):
+    """Add grocery items from a meal plan to a shopping list."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    family_id = auth["family_id"]
+    items = json.loads(items_json)
+
+    # Create a new list if none selected
+    if not list_id:
+        list_id = str(uuid4())
+        db.create_list(list_id, family_id, "Meal Plan Groceries", icon="🥗")
+
+    lst = db.get_list(list_id)
+    if not lst or lst["family_id"] != family_id:
+        return JSONResponse({"error": "list not found"}, status_code=404)
+
+    added = []
+    for item_text in items:
+        if not item_text.strip():
+            continue
+        item_id = str(uuid4())
+        db.add_list_item(item_id, list_id, item_text.strip(), added_by="Meal Planner")
+        added.append(item_text.strip())
+
+    return JSONResponse({
+        "ok": True,
+        "list_id": list_id,
+        "list_name": lst["name"] if lst else "Meal Plan Groceries",
+        "count": len(added),
+    })
+
+
 # ── Voice / AI agent routes ──
 
 @app.post("/api/voice-to-items")

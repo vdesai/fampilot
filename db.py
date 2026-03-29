@@ -174,6 +174,7 @@ def init_db() -> None:
         con.execute(_CREATE_LIST_ITEMS)
         con.execute(_CREATE_CHORES)
         con.execute(_CREATE_CHORE_LOG)
+        con.execute(_CREATE_MEAL_PLANS)
         for col, defn in _MIGRATIONS:
             try:
                 con.execute(f"ALTER TABLE items ADD COLUMN {col} {defn}")
@@ -829,7 +830,52 @@ def get_chore_streak(chore_id: str, today: str) -> int:
     return streak
 
 
+# ── Meal Plans ──
+
+_CREATE_MEAL_PLANS = """
+CREATE TABLE IF NOT EXISTS meal_plans (
+    id          TEXT PRIMARY KEY,
+    family_id   TEXT NOT NULL REFERENCES families(id),
+    created_at  TEXT NOT NULL,
+    days        INTEGER DEFAULT 7,
+    preferences TEXT,
+    meals_json  TEXT NOT NULL
+)
+"""
+
+
 # ── Usage tracking (freemium) ──
+
+def save_meal_plan(plan_id: str, family_id: str, meals_json: str,
+                   days: int = 7, preferences: str = "") -> None:
+    with _conn() as con:
+        con.execute(
+            """INSERT INTO meal_plans (id, family_id, created_at, days, preferences, meals_json)
+               VALUES (?,?,?,?,?,?)""",
+            (plan_id, family_id, datetime.now(timezone.utc).isoformat(),
+             days, preferences, meals_json),
+        )
+        con.commit()
+
+
+def get_latest_meal_plan(family_id: str) -> Optional[sqlite3.Row]:
+    with _conn() as con:
+        return con.execute(
+            "SELECT * FROM meal_plans WHERE family_id=? ORDER BY created_at DESC LIMIT 1",
+            (family_id,),
+        ).fetchone()
+
+
+def get_meal_plan(plan_id: str) -> Optional[sqlite3.Row]:
+    with _conn() as con:
+        return con.execute("SELECT * FROM meal_plans WHERE id=?", (plan_id,)).fetchone()
+
+
+def delete_meal_plan(plan_id: str) -> None:
+    with _conn() as con:
+        con.execute("DELETE FROM meal_plans WHERE id=?", (plan_id,))
+        con.commit()
+
 
 FREE_SCAN_LIMIT = 5  # per family per month
 
