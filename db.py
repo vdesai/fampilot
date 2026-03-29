@@ -97,6 +97,29 @@ CREATE TABLE IF NOT EXISTS invite_codes (
 )
 """
 
+_CREATE_LISTS = """
+CREATE TABLE IF NOT EXISTS lists (
+    id         TEXT PRIMARY KEY,
+    family_id  TEXT NOT NULL REFERENCES families(id),
+    name       TEXT NOT NULL,
+    icon       TEXT DEFAULT '🛒',
+    created_at TEXT NOT NULL,
+    archived   INTEGER DEFAULT 0
+)
+"""
+
+_CREATE_LIST_ITEMS = """
+CREATE TABLE IF NOT EXISTS list_items (
+    id         TEXT PRIMARY KEY,
+    list_id    TEXT NOT NULL REFERENCES lists(id),
+    text       TEXT NOT NULL,
+    checked    INTEGER DEFAULT 0,
+    added_by   TEXT,
+    created_at TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0
+)
+"""
+
 # Columns added after initial release — ALTER TABLE is idempotent via try/except
 _MIGRATIONS = [
     ("reminder_time",        "TEXT"),
@@ -125,6 +148,8 @@ def init_db() -> None:
         con.execute(_CREATE_MEMBERS)
         con.execute(_CREATE_DEVICES)
         con.execute(_CREATE_INVITE_CODES)
+        con.execute(_CREATE_LISTS)
+        con.execute(_CREATE_LIST_ITEMS)
         for col, defn in _MIGRATIONS:
             try:
                 con.execute(f"ALTER TABLE items ADD COLUMN {col} {defn}")
@@ -562,6 +587,112 @@ def row_to_result(row: sqlite3.Row) -> dict:
         "reasoning":  row["reasoning"] or "",
         "data":       data,
     }
+
+
+# ── Shopping Lists ──
+
+def create_list(list_id: str, family_id: str, name: str, icon: str = "🛒") -> None:
+    with _conn() as con:
+        con.execute(
+            "INSERT INTO lists (id, family_id, name, icon, created_at) VALUES (?,?,?,?,?)",
+            (list_id, family_id, name, icon, datetime.now(timezone.utc).isoformat()),
+        )
+        con.commit()
+
+
+def get_lists(family_id: str) -> list:
+    with _conn() as con:
+        return con.execute(
+            "SELECT * FROM lists WHERE family_id=? AND (archived=0 OR archived IS NULL) ORDER BY created_at DESC",
+            (family_id,),
+        ).fetchall()
+
+
+def get_list(list_id: str) -> Optional[sqlite3.Row]:
+    with _conn() as con:
+        return con.execute("SELECT * FROM lists WHERE id=?", (list_id,)).fetchone()
+
+
+def rename_list(list_id: str, name: str) -> None:
+    with _conn() as con:
+        con.execute("UPDATE lists SET name=? WHERE id=?", (name, list_id))
+        con.commit()
+
+
+def archive_list(list_id: str) -> None:
+    with _conn() as con:
+        con.execute("UPDATE lists SET archived=1 WHERE id=?", (list_id,))
+        con.commit()
+
+
+def delete_list(list_id: str) -> None:
+    with _conn() as con:
+        con.execute("DELETE FROM list_items WHERE list_id=?", (list_id,))
+        con.execute("DELETE FROM lists WHERE id=?", (list_id,))
+        con.commit()
+
+
+def add_list_item(item_id: str, list_id: str, text: str, added_by: str = "") -> None:
+    with _conn() as con:
+        # Get max sort_order for this list
+        row = con.execute(
+            "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM list_items WHERE list_id=?",
+            (list_id,),
+        ).fetchone()
+        sort_order = row["next_order"] if row else 0
+        con.execute(
+            "INSERT INTO list_items (id, list_id, text, added_by, created_at, sort_order) VALUES (?,?,?,?,?,?)",
+            (item_id, list_id, text, added_by, datetime.now(timezone.utc).isoformat(), sort_order),
+        )
+        con.commit()
+
+
+def get_list_items(list_id: str) -> list:
+    with _conn() as con:
+        return con.execute(
+            "SELECT * FROM list_items WHERE list_id=? ORDER BY checked ASC, sort_order ASC",
+            (list_id,),
+        ).fetchall()
+
+
+def check_list_item(item_id: str) -> None:
+    with _conn() as con:
+        con.execute("UPDATE list_items SET checked=1 WHERE id=?", (item_id,))
+        con.commit()
+
+
+def uncheck_list_item(item_id: str) -> None:
+    with _conn() as con:
+        con.execute("UPDATE list_items SET checked=0 WHERE id=?", (item_id,))
+        con.commit()
+
+
+def delete_list_item(item_id: str) -> None:
+    with _conn() as con:
+        con.execute("DELETE FROM list_items WHERE id=?", (item_id,))
+        con.commit()
+
+
+def clear_checked_items(list_id: str) -> None:
+    with _conn() as con:
+        con.execute("DELETE FROM list_items WHERE list_id=? AND checked=1", (list_id,))
+        con.commit()
+
+
+def get_list_summary(family_id: str) -> list:
+    """Return lists with item counts for the family."""
+    with _conn() as con:
+        return con.execute(
+            """SELECT l.*,
+                      COUNT(li.id) AS total_items,
+                      SUM(CASE WHEN li.checked = 1 THEN 1 ELSE 0 END) AS checked_items
+               FROM lists l
+               LEFT JOIN list_items li ON li.list_id = l.id
+               WHERE l.family_id = ? AND (l.archived = 0 OR l.archived IS NULL)
+               GROUP BY l.id
+               ORDER BY l.created_at DESC""",
+            (family_id,),
+        ).fetchall()
 
 
 # Initialise on import

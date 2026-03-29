@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lists – FamPilot</title>
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/static/manifest.json">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .page-content {
+            max-width: 540px;
+            margin: 0 auto;
+            padding: 24px 16px 100px;
+        }
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+        }
+
+        /* New list form */
+        .new-list-form {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .new-list-input {
+            flex: 1;
+            padding: 14px 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            background: rgba(255,255,255,0.95);
+            color: #333;
+        }
+        .new-list-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+        }
+        .new-list-input::placeholder { color: #aaa; }
+        .new-list-btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            background: white;
+            color: #667eea;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: transform 0.15s;
+        }
+        .new-list-btn:hover { transform: translateY(-1px); }
+
+        /* List cards */
+        .list-card {
+            background: white;
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            text-decoration: none;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .list-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+        .list-icon { font-size: 28px; flex-shrink: 0; }
+        .list-info { flex: 1; min-width: 0; }
+        .list-name {
+            font-size: 17px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 3px;
+        }
+        .list-meta {
+            font-size: 13px;
+            color: #888;
+        }
+        .list-count {
+            font-size: 14px;
+            font-weight: 700;
+            color: #667eea;
+            background: #f0f2ff;
+            padding: 4px 10px;
+            border-radius: 20px;
+            flex-shrink: 0;
+        }
+        .list-arrow {
+            color: #ccc;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        /* Empty state */
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .empty-icon { font-size: 56px; margin-bottom: 16px; }
+        .empty-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 8px;
+        }
+        .empty-sub {
+            font-size: 14px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* Preset buttons */
+        .presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .preset-btn {
+            padding: 8px 14px;
+            border: 1.5px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            background: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.9);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+            text-decoration: none;
+        }
+        .preset-btn:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.5);
+        }
+    </style>
+</head>
+<body>
+    {% include "_nav.html" %}
+    <div class="page-content">
+        <div class="page-header">
+            <div class="page-title">Lists</div>
+        </div>
+
+        <form class="new-list-form" action="/lists/create" method="post">
+            <input type="text" name="name" class="new-list-input" placeholder="New list name..." required>
+            <button type="submit" class="new-list-btn">+ Create</button>
+        </form>
+
+        <!-- Quick-create presets -->
+        <div class="presets">
+            <form action="/lists/create" method="post" style="display:contents;">
+                <input type="hidden" name="name" value="Groceries">
+                <input type="hidden" name="icon" value="🛒">
+                <button type="submit" class="preset-btn">🛒 Groceries</button>
+            </form>
+            <form action="/lists/create" method="post" style="display:contents;">
+                <input type="hidden" name="name" value="To-Do">
+                <input type="hidden" name="icon" value="✅">
+                <button type="submit" class="preset-btn">✅ To-Do</button>
+            </form>
+            <form action="/lists/create" method="post" style="display:contents;">
+                <input type="hidden" name="name" value="Packing">
+                <input type="hidden" name="icon" value="🧳">
+                <button type="submit" class="preset-btn">🧳 Packing</button>
+            </form>
+            <form action="/lists/create" method="post" style="display:contents;">
+                <input type="hidden" name="name" value="Costco Run">
+                <input type="hidden" name="icon" value="🏪">
+                <button type="submit" class="preset-btn">🏪 Costco Run</button>
+            </form>
+        </div>
+
+        {% if lists %}
+            {% for lst in lists %}
+            <a href="/lists/{{ lst.id }}" class="list-card">
+                <span class="list-icon">{{ lst.icon }}</span>
+                <div class="list-info">
+                    <div class="list-name">{{ lst.name }}</div>
+                    <div class="list-meta">
+                        {% if lst.total_items == 0 %}
+                            No items yet
+                        {% elif lst.checked_items == lst.total_items %}
+                            All done!
+                        {% else %}
+                            {{ lst.total_items - lst.checked_items }} remaining
+                        {% endif %}
+                    </div>
+                </div>
+                {% if lst.total_items > 0 %}
+                <span class="list-count">{{ lst.checked_items }}/{{ lst.total_items }}</span>
+                {% endif %}
+                <span class="list-arrow">›</span>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty">
+                <div class="empty-icon">📝</div>
+                <div class="empty-title">No lists yet</div>
+                <div class="empty-sub">Create a grocery list, packing list, or anything<br>your family needs to share.</div>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

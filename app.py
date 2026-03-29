@@ -1021,6 +1021,111 @@ async def delete_item(request: Request, item_id: str):
     return RedirectResponse(url="/history", status_code=303)
 
 
+# ── Shopping Lists ──
+
+@app.get("/lists", response_class=HTMLResponse)
+async def lists_page(request: Request):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+    lists = db.get_list_summary(auth["family_id"])
+    return templates.TemplateResponse(request, "lists.html", {
+        "request": request,
+        "lists": lists,
+        "nav_page": "lists",
+        "auth": auth,
+    })
+
+
+@app.post("/lists/create")
+async def create_list(request: Request, name: str = Form(...), icon: str = Form("🛒")):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+    list_id = str(uuid4())
+    db.create_list(list_id, auth["family_id"], name.strip() or "Shopping List", icon)
+    return RedirectResponse(url=f"/lists/{list_id}", status_code=303)
+
+
+@app.get("/lists/{list_id}", response_class=HTMLResponse)
+async def view_list(request: Request, list_id: str):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+    lst = db.get_list(list_id)
+    if not lst or lst["family_id"] != auth["family_id"]:
+        return RedirectResponse(url="/lists", status_code=303)
+    items = db.get_list_items(list_id)
+    unchecked = [i for i in items if not i["checked"]]
+    checked = [i for i in items if i["checked"]]
+    return templates.TemplateResponse(request, "list_detail.html", {
+        "request": request,
+        "list": lst,
+        "unchecked": unchecked,
+        "checked": checked,
+        "nav_page": "lists",
+        "auth": auth,
+    })
+
+
+@app.post("/lists/{list_id}/add")
+async def add_to_list(request: Request, list_id: str, text: str = Form(...)):
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    lst = db.get_list(list_id)
+    if not lst or lst["family_id"] != auth["family_id"]:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    # Support adding multiple items separated by newlines
+    added = []
+    for line in text.strip().split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        item_id = str(uuid4())
+        db.add_list_item(item_id, list_id, line, added_by=auth["display_name"])
+        added.append({"id": item_id, "text": line})
+    # If request is AJAX, return JSON; otherwise redirect
+    if request.headers.get("accept", "").startswith("application/json"):
+        return JSONResponse({"ok": True, "added": added})
+    return RedirectResponse(url=f"/lists/{list_id}", status_code=303)
+
+
+@app.post("/lists/{list_id}/check/{item_id}")
+async def check_item(list_id: str, item_id: str):
+    db.check_list_item(item_id)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/lists/{list_id}/uncheck/{item_id}")
+async def uncheck_item(list_id: str, item_id: str):
+    db.uncheck_list_item(item_id)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/lists/{list_id}/delete-item/{item_id}")
+async def delete_list_item_route(list_id: str, item_id: str):
+    db.delete_list_item(item_id)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/lists/{list_id}/clear-checked")
+async def clear_checked(request: Request, list_id: str):
+    db.clear_checked_items(list_id)
+    return RedirectResponse(url=f"/lists/{list_id}", status_code=303)
+
+
+@app.post("/lists/{list_id}/delete")
+async def delete_list_route(request: Request, list_id: str):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+    lst = db.get_list(list_id)
+    if lst and lst["family_id"] == auth["family_id"]:
+        db.delete_list(list_id)
+    return RedirectResponse(url="/lists", status_code=303)
+
+
 if __name__ == "__main__":
     import uvicorn
 
