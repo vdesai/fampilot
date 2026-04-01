@@ -1496,13 +1496,19 @@ Return ONLY a JSON object with one of these actions:
 
 4. Create a calendar event/task/reminder: {{"action": "create_event", "text": "the original text"}}
 
-5. Not sure: {{"action": "unknown", "text": "the original text"}}
+5. Generate a meal plan: {{"action": "generate_meal_plan", "days": 7, "preferences": ""}}
+   - Default to 7 days if not specified.
+   - Include any dietary preferences mentioned (e.g. "vegetarian", "no dairy").
+
+6. Not sure: {{"action": "unknown", "text": "the original text"}}
 
 Be smart. "Mark dishes done" matches a chore with "dishes" in the title.
 "Add milk to groceries" matches a list named "Groceries".
 "Assign laundry to Alex" creates a chore assigned to Alex.
 "We need tomatoes" adds to a grocery-type list if one exists.
 "Dentist Tuesday 3pm" creates a calendar event.
+"Plan meals for the week" generates a meal plan.
+"Make a 5 day vegetarian meal plan" generates a 5-day vegetarian meal plan.
 
 Voice command: "{text}"
 """}],
@@ -1575,6 +1581,63 @@ Voice command: "{text}"
                 "action": "chore_created",
                 "title": title,
                 "assigned_to": assigned,
+            })
+
+    elif result.get("action") == "generate_meal_plan":
+        days = result.get("days", 7)
+        preferences = result.get("preferences", "")
+        members = db.get_family_members(family_id)
+        member_count = len(members)
+
+        meal_client = Anthropic(api_key=api_key)
+        meal_msg = meal_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2048,
+            messages=[{"role": "user", "content": f"""Generate a {days}-day family meal plan.
+
+Family size: {member_count} people
+Preferences/restrictions: {preferences or 'None specified'}
+
+Return ONLY a JSON object with this structure:
+{{
+  "days": [
+    {{
+      "day": "Monday",
+      "breakfast": {{"name": "...", "time": "15 min"}},
+      "lunch": {{"name": "...", "time": "20 min"}},
+      "dinner": {{"name": "...", "time": "30 min"}},
+      "snack": {{"name": "..."}}
+    }}
+  ],
+  "grocery_list": ["item 1", "item 2", ...]
+}}
+
+Rules:
+- Practical, family-friendly meals (not fancy restaurant dishes)
+- Vary cuisines across the week
+- Include prep time estimates
+- The grocery list should include ALL ingredients needed, organized logically
+- Assume a basic pantry (salt, pepper, oil, common spices already available)
+- Keep it realistic for busy parents
+"""}],
+        )
+        try:
+            from main import clean_json_response
+            cleaned = clean_json_response(meal_msg.content[0].text)
+            meals = json.loads(cleaned)
+            plan_id = str(uuid4())
+            db.save_meal_plan(plan_id, family_id, json.dumps(meals),
+                              days=days, preferences=preferences)
+            return JSONResponse({
+                "action": "meal_plan_generated",
+                "plan_id": plan_id,
+                "days": days,
+                "redirect": "/meals",
+            })
+        except Exception:
+            return JSONResponse({
+                "action": "error",
+                "message": "Failed to generate meal plan. Please try again.",
             })
 
     elif result.get("action") == "create_event":

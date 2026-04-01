@@ -252,6 +252,11 @@
             if (window.location.pathname === '/chores') {
                 setTimeout(() => window.location.reload(), 1200);
             }
+        } else if (data.action === 'meal_plan_generated') {
+            gvToast(`Meal plan generated!`, `${data.days}-day plan ready`);
+            setTimeout(() => window.location.href = '/meals', 1200);
+        } else if (data.action === 'error') {
+            gvToast('Error', data.message || 'Something went wrong. Please try again.');
         } else if (data.action === 'create_event') {
             gvToast('Creating event...', '');
             const form = document.createElement('form');
