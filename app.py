@@ -441,14 +441,14 @@ def _base_url(request: Request) -> str:
 
 @app.get("/robots.txt", response_class=PlainTextResponse)
 async def robots():
-    return "User-agent: *\nAllow: /\nDisallow: /history\nDisallow: /settings\nSitemap: https://fampilot.onrender.com/sitemap.xml"
+    return "User-agent: *\nAllow: /\nDisallow: /history\nDisallow: /settings\nSitemap: https://fampilot-37ac.onrender.com/sitemap.xml"
 
 @app.get("/sitemap.xml", response_class=PlainTextResponse)
 async def sitemap():
     return """<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://fampilot.onrender.com/</loc><priority>1.0</priority></url>
-  <url><loc>https://fampilot.onrender.com/welcome</loc><priority>0.8</priority></url>
+  <url><loc>https://fampilot-37ac.onrender.com/</loc><priority>1.0</priority></url>
+  <url><loc>https://fampilot-37ac.onrender.com/welcome</loc><priority>0.8</priority></url>
 </urlset>"""
 
 # ── Main routes ──
