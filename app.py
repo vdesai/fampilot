@@ -1664,6 +1664,22 @@ Rules:
     return JSONResponse({"action": "unknown", "text": text})
 
 
+# ── Admin stats (password-protected) ──
+
+@app.get("/admin/stats", response_class=JSONResponse)
+async def admin_stats(request: Request, key: str = ""):
+    admin_key = os.getenv("ADMIN_KEY", "")
+    if not admin_key or key != admin_key:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    counts = {}
+    for table in ["families", "members", "devices", "items", "lists", "chores"]:
+        row = db._execute(f"SELECT COUNT(*) as cnt FROM {table}", fetch="one")
+        counts[table] = row["cnt"] if isinstance(row, dict) else row[0]
+
+    return JSONResponse(counts)
+
+
 if __name__ == "__main__":
     import uvicorn
 
