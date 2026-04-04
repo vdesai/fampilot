@@ -1677,6 +1677,17 @@ async def admin_stats(request: Request, key: str = ""):
         row = db._execute(f"SELECT COUNT(*) as cnt FROM {table}", fetch="one")
         counts[table] = row["cnt"] if isinstance(row, dict) else row[0]
 
+    families = db._execute("SELECT id, name, created_at FROM families ORDER BY created_at DESC", fetch="all")
+    family_list = []
+    for f in families:
+        members = db._execute("SELECT display_name FROM members WHERE family_id = ?", (f["id"],), fetch="all")
+        family_list.append({
+            "name": f["name"],
+            "created": str(f["created_at"]),
+            "members": [m["display_name"] for m in members],
+        })
+
+    counts["family_details"] = family_list
     return JSONResponse(counts)
 
 
