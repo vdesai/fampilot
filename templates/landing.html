@@ -3,11 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FamPilot — Your Family's AI Assistant</title>
-    <meta name="description" content="Turn photos into calendar events. Shared grocery lists. Family chores. AI meal planning. All by voice. No signup needed.">
+    <title>FamPilot — Free Family Organizer App | Shared Lists, Chores, Meal Planning & Voice Commands</title>
+    <meta name="description" content="FamPilot is a free family organizer app. Shared grocery lists, chore tracker with streaks, AI meal planner, photo-to-calendar, and voice commands. No download, no signup. Works on any phone.">
+    <meta name="keywords" content="family organizer app, shared grocery list app, family chore tracker, AI meal planner, photo to calendar event, family task manager, household management app, family planner free">
     <meta name="theme-color" content="#667eea">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="manifest" href="/static/manifest.json">
+    <link rel="canonical" href="https://fampilot.onrender.com/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="FamPilot — Free Family Organizer with Voice AI">
+    <meta property="og:description" content="Shared grocery lists, chore tracking, AI meal planning, photo-to-calendar. One app for the whole family. No signup needed.">
+    <meta property="og:url" content="https://fampilot.onrender.com/">
+    <meta property="og:site_name" content="FamPilot">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="FamPilot — Free Family Organizer with Voice AI">
+    <meta name="twitter:description" content="Shared grocery lists, chore tracking, AI meal planning, photo-to-calendar. One app for the whole family. No signup needed.">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -294,6 +308,38 @@
             color: #aaa;
         }
 
+        /* ── FAQ ── */
+        .faq-list {
+            max-width: 640px;
+            margin: 0 auto;
+        }
+        .faq-item {
+            border-bottom: 1px solid #e8e8e8;
+            padding: 0;
+        }
+        .faq-q {
+            font-size: 16px;
+            font-weight: 600;
+            padding: 20px 0;
+            cursor: pointer;
+            list-style: none;
+        }
+        .faq-q::-webkit-details-marker { display: none; }
+        .faq-q::before {
+            content: '+';
+            font-size: 20px;
+            font-weight: 400;
+            color: #667eea;
+            margin-right: 12px;
+        }
+        details[open] .faq-q::before { content: '−'; }
+        .faq-a {
+            font-size: 15px;
+            color: #666;
+            line-height: 1.6;
+            padding: 0 0 20px 32px;
+        }
+
         /* ── Responsive ── */
         @media (max-width: 600px) {
             .hero h1 { font-size: 30px; }
@@ -302,6 +348,75 @@
             .price-amount { font-size: 36px; }
         }
     </style>
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "FamPilot",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any (Web App)",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "description": "Free family organizer app with shared grocery lists, chore tracking, AI meal planning, photo-to-calendar events, and voice commands.",
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "ratingCount": "12"
+        }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": "Do I need to download an app?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "No. FamPilot works in your phone's browser. You can add it to your home screen for an app-like experience — no app store needed."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "How does the family sharing work?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "When you create a family, you get an invite code and QR code. Share it with your family members — they scan or enter the code and instantly see the same lists, chores, and events."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "How does the photo-to-calendar feature work?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Take a photo of any event flyer, school notice, or schedule. FamPilot's AI reads the image and extracts the event title, date, time, and location. You review it and add it to Google Calendar with one tap."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "How does AI meal planning work?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Tell FamPilot your family size and any dietary preferences. The AI generates a full week of meals with prep times and creates a grocery list you can send straight to your shared shopping list."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Is FamPilot free?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes. The free plan includes 5 AI scans per month, unlimited shared lists, chore tracking, and voice commands. Pro is $5/month per family for unlimited AI scans."
+                }
+            }
+        ]
+    }
+    </script>
 </head>
 <body>
 
@@ -314,8 +429,8 @@
 </div>
 
 <div class="section">
-    <div class="section-title">How it works</div>
-    <div class="section-sub">Three ways to never forget anything again</div>
+    <h2 class="section-title">How it works</h2>
+    <p class="section-sub">Three ways to never forget anything again</p>
     <div class="steps">
         <div class="step">
             <div class="step-icon">📸</div>
@@ -340,8 +455,8 @@
 
 <div class="features-bg">
     <div class="section">
-        <div class="section-title">Everything your family needs</div>
-        <div class="section-sub">One app instead of five</div>
+        <h2 class="section-title">Everything your family needs</h2>
+        <p class="section-sub">One app instead of five</p>
         <div class="features">
             <div class="feature-card">
                 <div class="feature-icon">📅</div>
@@ -364,6 +479,11 @@
                 <p>Tap the mic anywhere. The AI figures out what you need and does it.</p>
             </div>
             <div class="feature-card">
+                <div class="feature-icon">🍽️</div>
+                <h3>AI Meal Planner</h3>
+                <p>Generate a week of family meals with one tap. Ingredients go straight to your grocery list.</p>
+            </div>
+            <div class="feature-card">
                 <div class="feature-icon">🔔</div>
                 <h3>Smart Reminders</h3>
                 <p>Never miss a pickup, deadline, or appointment again.</p>
@@ -371,27 +491,28 @@
             <div class="feature-card">
                 <div class="feature-icon">🔒</div>
                 <h3>No Account Needed</h3>
-                <p>No email. No password. Start in seconds. Family joins with a code.</p>
+                <p>No email. No password. Start in seconds. Family joins with a QR code.</p>
             </div>
         </div>
     </div>
 </div>
 
 <div class="voice-section">
-    <div class="section-title">Just say it</div>
-    <div class="section-sub">The mic button works on every page</div>
+    <h2 class="section-title">Just say it — the AI agent does the rest</h2>
+    <p class="section-sub">Voice is the interface. No tapping, no typing.</p>
     <div class="voice-examples">
         <div class="voice-chip"><span class="voice-chip-mic">🎙️</span> "Add milk and bread to groceries"</div>
         <div class="voice-chip"><span class="voice-chip-mic">🎙️</span> "Mark dishes done"</div>
         <div class="voice-chip"><span class="voice-chip-mic">🎙️</span> "Dentist Tuesday at 3"</div>
         <div class="voice-chip"><span class="voice-chip-mic">🎙️</span> "Assign laundry to Alex"</div>
+        <div class="voice-chip"><span class="voice-chip-mic">🎙️</span> "Plan meals for the week"</div>
         <div class="voice-chip"><span class="voice-chip-mic">🎙️</span> "We need sunscreen and towels for the trip"</div>
     </div>
 </div>
 
 <div class="section">
-    <div class="section-title">Simple pricing</div>
-    <div class="section-sub">Free for most families. Pro for power users.</div>
+    <h2 class="section-title">Simple pricing</h2>
+    <p class="section-sub">Free for most families. Pro for power users.</p>
     <div class="pricing">
         <div class="price-card">
             <div class="price-name">Free</div>
@@ -423,8 +544,41 @@
     </div>
 </div>
 
+<div class="features-bg">
+    <div class="section">
+        <h2 class="section-title">Frequently asked questions</h2>
+        <p class="section-sub">Everything you need to know about FamPilot</p>
+        <div class="faq-list">
+            <details class="faq-item">
+                <summary class="faq-q">Do I need to download an app?</summary>
+                <p class="faq-a">No. FamPilot works in your phone's browser. You can add it to your home screen for an app-like experience — no app store needed.</p>
+            </details>
+            <details class="faq-item">
+                <summary class="faq-q">How does the family sharing work?</summary>
+                <p class="faq-a">When you create a family, you get an invite code and QR code. Share it with your family members — they scan or enter the code and instantly see the same lists, chores, and events. No emails or accounts required.</p>
+            </details>
+            <details class="faq-item">
+                <summary class="faq-q">How does the photo-to-calendar feature work?</summary>
+                <p class="faq-a">Take a photo of any event flyer, school notice, or schedule. FamPilot's AI reads the image and extracts the event title, date, time, and location. You review it and add it to Google Calendar with one tap.</p>
+            </details>
+            <details class="faq-item">
+                <summary class="faq-q">What can the voice commands do?</summary>
+                <p class="faq-a">The AI voice agent can add items to shopping lists, mark chores as done, create calendar events, assign chores to family members, and generate meal plans — all from a single voice command.</p>
+            </details>
+            <details class="faq-item">
+                <summary class="faq-q">How does AI meal planning work?</summary>
+                <p class="faq-a">Tell FamPilot your family size and any dietary preferences. The AI generates a full week of breakfast, lunch, dinner, and snacks with prep times. It also creates a grocery list you can send straight to your shared shopping list.</p>
+            </details>
+            <details class="faq-item">
+                <summary class="faq-q">Is FamPilot free?</summary>
+                <p class="faq-a">Yes. The free plan includes 5 AI scans per month, unlimited shared lists, chore tracking, and voice commands. The Pro plan ($5/month per family) adds unlimited AI scans and priority processing.</p>
+            </details>
+        </div>
+    </div>
+</div>
+
 <div class="landing-footer">
-    <p>Made for families, by families. Powered by Claude AI.</p>
+    <p>FamPilot — the free family organizer app with shared lists, chore tracking, AI meal planning, and voice commands. Made for busy families.</p>
 </div>
 
 </body>

@@ -16,7 +16,7 @@ from urllib.parse import quote
 from uuid import uuid4
 
 from fastapi import FastAPI, UploadFile, File, Form, Request, Response
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -436,6 +436,20 @@ def _base_url(request: Request) -> str:
     host  = request.headers.get("x-forwarded-host", request.url.netloc)
     return f"{proto}://{host}"
 
+
+# ── SEO routes ──
+
+@app.get("/robots.txt", response_class=PlainTextResponse)
+async def robots():
+    return "User-agent: *\nAllow: /\nDisallow: /history\nDisallow: /settings\nSitemap: https://fampilot.onrender.com/sitemap.xml"
+
+@app.get("/sitemap.xml", response_class=PlainTextResponse)
+async def sitemap():
+    return """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://fampilot.onrender.com/</loc><priority>1.0</priority></url>
+  <url><loc>https://fampilot.onrender.com/welcome</loc><priority>0.8</priority></url>
+</urlset>"""
 
 # ── Main routes ──
 
