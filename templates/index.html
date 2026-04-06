@@ -790,8 +790,8 @@
                 <div style="font-size:15px; font-weight:700; color:#333;">Talk</div>
                 <div style="font-size:11px; color:#999; margin-top:2px;">Say what you need</div>
             </div>
-            <!-- Scan -->
-            <div onclick="toggleScan(); document.getElementById('scanSection').scrollIntoView({behavior:'smooth'});" style="cursor:pointer; background:white; border-radius:20px; padding:20px 14px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.08); transition:transform 0.15s;">
+            <!-- Scan — directly opens file picker -->
+            <div onclick="document.getElementById('fileInput').click();" style="cursor:pointer; background:white; border-radius:20px; padding:20px 14px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.08); transition:transform 0.15s;">
                 <div style="font-size:32px; margin-bottom:8px;">📸</div>
                 <div style="font-size:15px; font-weight:700; color:#333;">Scan</div>
                 <div style="font-size:11px; color:#999; margin-top:2px;">Photo or text</div>
@@ -866,48 +866,24 @@
         </div>
         {% endif %}
 
-        <!-- Scan card (expandable) -->
-        <div class="card" style="border-radius:20px; overflow:hidden; margin-bottom:12px;" id="scanSection">
-            <div style="padding:14px 20px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="toggleScan()">
-                    <span style="font-size:14px; font-weight:600; color:#333;">📸 Scan a flyer or note</span>
-                    <span id="scanToggle" style="font-size:12px; color:#ccc; transition:transform 0.2s;">▼</span>
-                </div>
-                <div id="scanBody" style="display:none; margin-top:14px;">
-                    <div class="tabs">
-                        <button type="button" class="tab active" id="tabImage" onclick="switchTab('image')">📸 Image</button>
-                        <button type="button" class="tab" id="tabText" onclick="switchTab('text')">✍️ Text</button>
-                    </div>
-                    <div id="panelImage">
-                        <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
-                            <div class="upload-area" id="uploadArea" style="padding:24px 16px; border-width:2px;">
-                                <div class="upload-icon" style="font-size:36px;">📸</div>
-                                <div class="upload-text" style="font-size:14px;">Tap to upload a photo</div>
-                                <div class="upload-subtext" style="font-size:12px;">PNG, JPG, or JPEG</div>
-                                <input type="file" id="fileInput" name="file" accept="image/*" required>
-                            </div>
-                            <div class="file-name" id="fileName">
-                                <span class="file-name-icon">✓</span>
-                                <span id="fileNameText"></span>
-                            </div>
-                            <button type="submit" id="submitBtn" disabled>
-                                <span class="spinner"></span>
-                                <span class="button-text">Analyze Image</span>
-                            </button>
-                        </form>
-                    </div>
-                    <div id="panelText" style="display:none;">
-                        <form id="textForm" action="/process-text" method="post">
-                            <textarea id="textInput" name="text" placeholder="Paste event details, a to-do, or a reminder..." required style="height:100px;"></textarea>
-                            <button type="submit" id="textSubmitBtn" disabled>
-                                <span class="spinner" id="textSpinner"></span>
-                                <span class="button-text" id="textBtnLabel">Analyze Text</span>
-                            </button>
-                        </form>
-                    </div>
+        <!-- Hidden upload form (triggered by Scan button) -->
+        <div id="scanFormWrap" style="display:none;">
+            <div class="card" style="border-radius:20px; overflow:hidden; margin-bottom:12px;">
+                <div style="padding:20px;">
+                    <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+                        <div class="file-name" id="fileName">
+                            <span class="file-name-icon">✓</span>
+                            <span id="fileNameText"></span>
+                        </div>
+                        <button type="submit" id="submitBtn" disabled>
+                            <span class="spinner"></span>
+                            <span class="button-text">Analyze Image</span>
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
+        <input type="file" id="fileInput" name="file" accept="image/*" style="display:none;">
 
         <!-- Family card -->
         <div class="card" style="border-radius:20px; overflow:hidden; margin-bottom:12px;">
@@ -933,69 +909,36 @@
     </div><!-- /page-content -->
 
     <script>
-        // Scan section toggle
-        function toggleScan() {
-            const body = document.getElementById('scanBody');
-            const toggle = document.getElementById('scanToggle');
-            if (body.style.display === 'none') {
-                body.style.display = 'block';
-                toggle.style.transform = 'rotate(180deg)';
-            } else {
-                body.style.display = 'none';
-                toggle.style.transform = 'rotate(0deg)';
-            }
-        }
-
-        // Tab switching
-        function switchTab(tab) {
-            document.getElementById('panelImage').style.display = tab === 'image' ? 'block' : 'none';
-            document.getElementById('panelText').style.display  = tab === 'text'  ? 'block' : 'none';
-            document.getElementById('tabImage').classList.toggle('active', tab === 'image');
-            document.getElementById('tabText').classList.toggle('active', tab === 'text');
-        }
-
         // Image upload
-        const uploadArea  = document.getElementById('uploadArea');
         const fileInput   = document.getElementById('fileInput');
         const fileName    = document.getElementById('fileName');
         const fileNameText = document.getElementById('fileNameText');
         const submitBtn   = document.getElementById('submitBtn');
         const uploadForm  = document.getElementById('uploadForm');
 
-        uploadArea.addEventListener('click', () => fileInput.click());
-
-        function handleFileSelect(file) {
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
             if (file && file.type.startsWith('image/')) {
                 fileNameText.textContent = file.name;
                 fileName.classList.add('show');
                 submitBtn.disabled = false;
+                document.getElementById('scanFormWrap').style.display = 'block';
+                document.getElementById('scanFormWrap').scrollIntoView({behavior:'smooth'});
+                // Attach file to the form
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                const formInput = document.createElement('input');
+                formInput.type = 'file';
+                formInput.name = 'file';
+                formInput.style.display = 'none';
+                formInput.files = dt.files;
+                const existing = uploadForm.querySelector('input[type="file"]');
+                if (existing) existing.remove();
+                uploadForm.appendChild(formInput);
             }
-        }
-        fileInput.addEventListener('change', (e) => handleFileSelect(e.target.files[0]));
-
-        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
-        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) { fileInput.files = e.dataTransfer.files; handleFileSelect(file); }
         });
 
         uploadForm.addEventListener('submit', () => { submitBtn.classList.add('loading'); submitBtn.disabled = true; });
-
-        // Text input
-        const textInput     = document.getElementById('textInput');
-        const textSubmitBtn = document.getElementById('textSubmitBtn');
-        const textForm      = document.getElementById('textForm');
-
-        textInput.addEventListener('input', () => {
-            textSubmitBtn.disabled = textInput.value.trim().length === 0;
-        });
-        textForm.addEventListener('submit', () => {
-            textSubmitBtn.classList.add('loading');
-            textSubmitBtn.disabled = true;
-        });
 
         // ── Relative time for upcoming items ──
         function relativeTime(dateStr, timeStr) {
@@ -1130,6 +1073,12 @@
         window.addEventListener('appinstalled', () => {
             document.getElementById('installBanner')?.classList.add('install-hidden');
         });
+
+        // Hide floating mic on home page (Talk card replaces it)
+        const fab = document.getElementById('gvFab');
+        const fabLabel = document.getElementById('gvLabel');
+        if (fab) fab.style.display = 'none';
+        if (fabLabel) fabLabel.style.display = 'none';
 
         // ── Register service worker ──
         if ('serviceWorker' in navigator) {
