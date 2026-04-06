@@ -798,26 +798,6 @@
                     <div style="font-size:11px;color:#999;margin-top:6px;">Scan to join {{ auth.family_name }}</div>
                 </div>
 
-                <!-- Quick nav grid -->
-                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-bottom:16px;">
-                    <a href="/lists" style="text-decoration:none; background:#f8f9ff; border-radius:14px; padding:14px 8px; text-align:center; transition:background 0.15s;">
-                        <div style="font-size:24px; margin-bottom:4px;">🛒</div>
-                        <div style="font-size:11px; font-weight:700; color:#667eea;">Lists</div>
-                    </a>
-                    <a href="/chores" style="text-decoration:none; background:#f8f9ff; border-radius:14px; padding:14px 8px; text-align:center; transition:background 0.15s;">
-                        <div style="font-size:24px; margin-bottom:4px;">🧹</div>
-                        <div style="font-size:11px; font-weight:700; color:#667eea;">Chores</div>
-                    </a>
-                    <a href="/meals" style="text-decoration:none; background:#f8f9ff; border-radius:14px; padding:14px 8px; text-align:center; transition:background 0.15s;">
-                        <div style="font-size:24px; margin-bottom:4px;">🍽️</div>
-                        <div style="font-size:11px; font-weight:700; color:#667eea;">Meals</div>
-                    </a>
-                    <a href="/history" style="text-decoration:none; background:#f8f9ff; border-radius:14px; padding:14px 8px; text-align:center; transition:background 0.15s;">
-                        <div style="font-size:24px; margin-bottom:4px;">📅</div>
-                        <div style="font-size:11px; font-weight:700; color:#667eea;">Calendar</div>
-                    </a>
-                </div>
-
                 <!-- Usage meter (only show when scans used) -->
                 {% if usage and not usage.premium and usage.scans_used > 0 %}
                 <div style="background:{% if usage.scans_remaining <= 1 %}#fff5f5{% else %}#f8f9ff{% endif %}; border-radius:10px; padding:10px 14px; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
