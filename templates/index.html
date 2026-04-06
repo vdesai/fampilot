@@ -915,78 +915,67 @@
         </div>
         {% endif %}
 
-        <!-- Main Card -->
-        <div class="card">
-            <div class="card-body">
-
-                <!-- Tabs -->
-                <div class="tabs">
-                    <button type="button" class="tab active" id="tabImage" onclick="switchTab('image')">📸 Image</button>
-                    <button type="button" class="tab" id="tabText" onclick="switchTab('text')">✍️ Text</button>
-                </div>
-
-                <!-- Image Upload Tab -->
-                <div id="panelImage">
-                    <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
-                        <div class="upload-area" id="uploadArea">
-                            <div class="upload-icon">📸</div>
-                            <div class="upload-text">Click to upload or drag & drop</div>
-                            <div class="upload-subtext">PNG, JPG, or JPEG • Max 10MB</div>
-                            <input type="file" id="fileInput" name="file" accept="image/*" required>
+        <!-- Scan Card (collapsible) -->
+        <div class="upcoming-section" id="scanSection">
+            <div style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="toggleScan()">
+                <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:0.6px;">📸 Scan a flyer or note</span>
+                <span id="scanToggle" style="font-size:14px; color:rgba(255,255,255,0.4); transition:transform 0.2s;">▼</span>
+            </div>
+            <div id="scanBody" style="display:none; margin-top:14px;">
+                <div class="card" style="margin:0;">
+                    <div class="card-body" style="padding:24px;">
+                        <div class="tabs">
+                            <button type="button" class="tab active" id="tabImage" onclick="switchTab('image')">📸 Image</button>
+                            <button type="button" class="tab" id="tabText" onclick="switchTab('text')">✍️ Text</button>
                         </div>
-                        <div class="file-name" id="fileName">
-                            <span class="file-name-icon">✓</span>
-                            <span id="fileNameText"></span>
+                        <div id="panelImage">
+                            <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+                                <div class="upload-area" id="uploadArea" style="padding:30px 20px;">
+                                    <div class="upload-icon" style="font-size:40px;">📸</div>
+                                    <div class="upload-text" style="font-size:15px;">Tap to upload a photo</div>
+                                    <div class="upload-subtext">PNG, JPG, or JPEG</div>
+                                    <input type="file" id="fileInput" name="file" accept="image/*" required>
+                                </div>
+                                <div class="file-name" id="fileName">
+                                    <span class="file-name-icon">✓</span>
+                                    <span id="fileNameText"></span>
+                                </div>
+                                <button type="submit" id="submitBtn" disabled>
+                                    <span class="spinner"></span>
+                                    <span class="button-text">Analyze Image</span>
+                                </button>
+                            </form>
                         </div>
-                        <button type="submit" id="submitBtn" disabled>
-                            <span class="spinner"></span>
-                            <span class="button-text">🚀 Analyze Image</span>
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Text Input Tab -->
-                <div id="panelText" style="display:none;">
-                    <form id="textForm" action="/process-text" method="post">
-                        <textarea id="textInput" name="text" placeholder="Paste or type anything — an event description, a to-do item, a reminder note..." required></textarea>
-                        <button type="submit" id="textSubmitBtn" disabled>
-                            <span class="spinner" id="textSpinner"></span>
-                            <span class="button-text" id="textBtnLabel">🚀 Analyze Text</span>
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Features -->
-                <div class="features">
-                    <div class="features-title">Upload a photo or paste text to extract</div>
-                    <div class="feature">
-                        <span class="feature-icon">📅</span>
-                        <span class="feature-text">Events — dates, times, locations</span>
-                    </div>
-                    <div class="feature">
-                        <span class="feature-icon">✅</span>
-                        <span class="feature-text">Tasks — with priority and due date</span>
-                    </div>
-                    <div class="feature">
-                        <span class="feature-icon">🔔</span>
-                        <span class="feature-text">Reminders — never forget again</span>
-                    </div>
-                    <div class="feature">
-                        <span class="feature-icon">💡</span>
-                        <span class="feature-text">Tip: use the mic button for everything else</span>
+                        <div id="panelText" style="display:none;">
+                            <form id="textForm" action="/process-text" method="post">
+                                <textarea id="textInput" name="text" placeholder="Paste event details, a to-do, or a reminder..." required style="height:100px;"></textarea>
+                                <button type="submit" id="textSubmitBtn" disabled>
+                                    <span class="spinner" id="textSpinner"></span>
+                                    <span class="button-text" id="textBtnLabel">Analyze Text</span>
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="footer">
-            <p>FamPilot — your family, organized</p>
         </div>
     </div>
     </div><!-- /page-content -->
 
     <script>
+        // Scan section toggle
+        function toggleScan() {
+            const body = document.getElementById('scanBody');
+            const toggle = document.getElementById('scanToggle');
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                toggle.style.transform = 'rotate(180deg)';
+            } else {
+                body.style.display = 'none';
+                toggle.style.transform = 'rotate(0deg)';
+            }
+        }
+
         // Tab switching
         function switchTab(tab) {
             document.getElementById('panelImage').style.display = tab === 'image' ? 'block' : 'none';
