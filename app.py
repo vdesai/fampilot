@@ -9,7 +9,7 @@ import os
 import json
 import re
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, Dict, Tuple
 from urllib.parse import quote
@@ -1680,13 +1680,27 @@ async def admin_stats(request: Request, key: str = ""):
     families = db._execute("SELECT id, name, created_at FROM families ORDER BY created_at DESC", fetch="all")
     family_list = []
     for f in families:
-        members = db._execute("SELECT display_name FROM members WHERE family_id = ?", (f["id"],), fetch="all")
+        members = db._execute(
+            "SELECT m.display_name, d.last_seen FROM members m LEFT JOIN devices d ON d.member_id = m.id WHERE m.family_id = ? ORDER BY d.last_seen DESC",
+            (f["id"],), fetch="all"
+        )
         family_list.append({
             "name": f["name"],
             "created": str(f["created_at"]),
-            "members": [m["display_name"] for m in members],
+            "members": [{"name": m["display_name"], "last_seen": str(m["last_seen"] or "")} for m in members],
         })
 
+    # Active in last 24h / 7d
+    active_24h = db._execute(
+        "SELECT COUNT(DISTINCT member_id) as cnt FROM devices WHERE last_seen > ?",
+        ((datetime.now(timezone.utc) - timedelta(hours=24)).isoformat(),), fetch="one"
+    )
+    active_7d = db._execute(
+        "SELECT COUNT(DISTINCT member_id) as cnt FROM devices WHERE last_seen > ?",
+        ((datetime.now(timezone.utc) - timedelta(days=7)).isoformat(),), fetch="one"
+    )
+    counts["active_last_24h"] = active_24h["cnt"] if isinstance(active_24h, dict) else active_24h[0]
+    counts["active_last_7d"] = active_7d["cnt"] if isinstance(active_7d, dict) else active_7d[0]
     counts["family_details"] = family_list
     return JSONResponse(counts)
 
