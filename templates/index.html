@@ -755,10 +755,9 @@
     <div class="page-content">
     <div class="container">
         <!-- Header -->
-        <div class="header">
-            <div class="logo">📅</div>
-            <h1>FamPilot</h1>
-            <p>Just talk — your AI assistant handles the rest</p>
+        <div class="header" style="margin-bottom: 16px;">
+            <h1 style="font-size: 28px; margin-bottom: 4px;">FamPilot</h1>
+            <p style="font-size: 14px;">Just talk — your AI assistant handles the rest</p>
         </div>
 
         <!-- Triggered reminder banners -->
@@ -783,31 +782,26 @@
             <button class="install-btn" onclick="installApp()">Install</button>
         </div>
 
-        <!-- Family info + invite -->
-        <div class="share-widget" style="flex-wrap:wrap;">
-            <span class="share-icon">👨‍👩‍👧‍👦</span>
+        <!-- Family info + invite (compact) -->
+        <div class="share-widget" style="flex-wrap:wrap; padding: 8px 12px;">
+            <span class="share-icon" style="font-size:14px;">👨‍👩‍👧‍👦</span>
             <div class="share-info">
-                <div class="share-label">{{ auth.family_name }}</div>
-                <div class="share-url">
-                    Invite code: <strong id="inviteCode">{{ invite_code }}</strong>
-                    {% if members|length > 1 %}
-                    &nbsp;·&nbsp;{{ members|length }} members
-                    {% endif %}
+                <div class="share-url" style="font-size:12px;">
+                    <strong>{{ auth.family_name }}</strong>{% if members|length > 1 %} · {{ members|length }} members{% endif %}
                 </div>
             </div>
             <div class="share-actions">
-                <button class="share-btn" id="copyBtn" onclick="copyInvite()">Copy Link</button>
-                <button class="share-btn" onclick="showQR()">QR</button>
+                <button class="share-btn" id="copyBtn" onclick="copyInvite()" style="font-size:11px !important; padding:4px 10px !important;">Invite</button>
+                <button class="share-btn" onclick="showQR()" style="font-size:11px !important; padding:4px 10px !important;">QR</button>
             </div>
-            <!-- QR code (hidden by default) -->
             <div id="qrWrap" style="display:none;width:100%;text-align:center;padding:12px 0 4px;">
-                <img src="/invite-qr/{{ invite_code }}" alt="QR Code" style="width:180px;height:180px;border-radius:12px;">
-                <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:6px;">Scan to join {{ auth.family_name }}</div>
+                <img src="/invite-qr/{{ invite_code }}" alt="QR Code" style="width:160px;height:160px;border-radius:12px;">
+                <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:6px;">Scan to join {{ auth.family_name }}</div>
             </div>
         </div>
 
-        <!-- Usage meter (free tier) -->
-        {% if usage and not usage.premium %}
+        <!-- Usage meter (only show when scans have been used) -->
+        {% if usage and not usage.premium and usage.scans_used > 0 %}
         <div class="share-widget" style="{% if usage.scans_remaining <= 1 %}border-color: rgba(255,100,100,0.4); background: rgba(255,100,100,0.12);{% endif %}">
             <span class="share-icon">{% if usage.scans_remaining > 1 %}⚡{% else %}⚠️{% endif %}</span>
             <div class="share-info">
