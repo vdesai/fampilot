@@ -782,16 +782,30 @@
             <div style="font-size:13px; color:rgba(255,255,255,0.7); margin-top:2px;">What can I help with?</div>
         </div>
 
-        <!-- Voice command card — THE main action -->
-        <div class="card" style="border-radius:20px; overflow:hidden; margin-bottom:12px;">
-            <div style="padding:20px; text-align:center; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                <div style="font-size:36px; margin-bottom:6px;">🎙️</div>
-                <div style="font-size:16px; font-weight:700; color:white; margin-bottom:4px;">Tap the mic and say anything</div>
-                <div style="font-size:12px; color:rgba(255,255,255,0.75); margin-bottom:14px;">or try one of these:</div>
-                <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;">
-                    <span style="background:rgba(255,255,255,0.2); border-radius:20px; padding:7px 14px; font-size:12px; color:white; font-weight:500; cursor:pointer;" onclick="gvExec('Add milk to groceries')">"Add milk to groceries"</span>
-                    <span style="background:rgba(255,255,255,0.2); border-radius:20px; padding:7px 14px; font-size:12px; color:white; font-weight:500; cursor:pointer;" onclick="gvExec('Plan meals for the week')">"Plan meals for the week"</span>
-                    <span style="background:rgba(255,255,255,0.2); border-radius:20px; padding:7px 14px; font-size:12px; color:white; font-weight:500; cursor:pointer;" onclick="gvExec('Create a chore for dishes')">"Create a chore for dishes"</span>
+        <!-- Two main actions -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
+            <!-- Voice -->
+            <div onclick="gvToggle()" style="cursor:pointer; background:white; border-radius:20px; padding:20px 14px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.08); transition:transform 0.15s;">
+                <div style="font-size:32px; margin-bottom:8px;">🎙️</div>
+                <div style="font-size:15px; font-weight:700; color:#333;">Talk</div>
+                <div style="font-size:11px; color:#999; margin-top:2px;">Say what you need</div>
+            </div>
+            <!-- Scan -->
+            <div onclick="toggleScan(); document.getElementById('scanSection').scrollIntoView({behavior:'smooth'});" style="cursor:pointer; background:white; border-radius:20px; padding:20px 14px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.08); transition:transform 0.15s;">
+                <div style="font-size:32px; margin-bottom:8px;">📸</div>
+                <div style="font-size:15px; font-weight:700; color:#333;">Scan</div>
+                <div style="font-size:11px; color:#999; margin-top:2px;">Photo or text</div>
+            </div>
+        </div>
+
+        <!-- Try these (tappable examples) -->
+        <div class="card" style="border-radius:16px; margin-bottom:12px; overflow:hidden;">
+            <div style="padding:14px 16px;">
+                <div style="font-size:11px; font-weight:700; color:#999; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Try saying:</div>
+                <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                    <span onclick="gvExec('Add milk to groceries')" style="background:#f0f2ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:background 0.15s;">"Add milk to groceries"</span>
+                    <span onclick="gvExec('Plan meals for the week')" style="background:#f0f2ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:background 0.15s;">"Plan meals for the week"</span>
+                    <span onclick="gvExec('Create a chore for dishes')" style="background:#f0f2ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:background 0.15s;">"Create a chore for dishes"</span>
                 </div>
             </div>
         </div>
@@ -852,28 +866,11 @@
         </div>
         {% endif %}
 
-        <!-- Family + Scan card -->
-        <div class="card" style="border-radius:20px; overflow:hidden; margin-bottom:12px;">
-            <div style="padding:16px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f0f0f0;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #667eea, #764ba2); display:flex; align-items:center; justify-content:center; font-size:18px;">👨‍👩‍👧‍👦</div>
-                    <div>
-                        <div style="font-size:15px; font-weight:700; color:#333;">{{ auth.family_name }}</div>
-                        <div style="font-size:11px; color:#999;">{% if members|length > 1 %}{{ members|length }} members{% else %}Invite your family{% endif %}</div>
-                    </div>
-                </div>
-                <div style="display:flex; gap:6px;">
-                    <button onclick="copyInvite()" id="copyBtn" style="background:#f0f2ff; color:#667eea; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; width:auto; box-shadow:none; transform:none;">Invite</button>
-                    <button onclick="showQR()" style="background:#f0f2ff; color:#667eea; border:none; padding:7px 10px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; width:auto; box-shadow:none; transform:none;">QR</button>
-                </div>
-            </div>
-            <div id="qrWrap" style="display:none;text-align:center;padding:16px 20px; background:#f8f9ff;">
-                <img src="/invite-qr/{{ invite_code }}" alt="QR Code" style="width:160px;height:160px;border-radius:12px;">
-                <div style="font-size:11px;color:#999;margin-top:6px;">Scan to join {{ auth.family_name }}</div>
-            </div>
+        <!-- Scan card (expandable) -->
+        <div class="card" style="border-radius:20px; overflow:hidden; margin-bottom:12px;" id="scanSection">
             <div style="padding:14px 20px;">
                 <div style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="toggleScan()">
-                    <span style="font-size:13px; font-weight:600; color:#999;">📸 Scan a flyer or note</span>
+                    <span style="font-size:14px; font-weight:600; color:#333;">📸 Scan a flyer or note</span>
                     <span id="scanToggle" style="font-size:12px; color:#ccc; transition:transform 0.2s;">▼</span>
                 </div>
                 <div id="scanBody" style="display:none; margin-top:14px;">
@@ -912,12 +909,26 @@
             </div>
         </div>
 
-        <!-- Usage (only when used) -->
-        {% if usage and not usage.premium and usage.scans_used > 0 %}
-        <div style="text-align:center; padding:4px 0;">
-            <span style="font-size:11px; color:rgba(255,255,255,0.5);">⚡ AI Scans: {{ usage.scans_used }}/{{ usage.scans_limit }} this month</span>
+        <!-- Family card -->
+        <div class="card" style="border-radius:20px; overflow:hidden; margin-bottom:12px;">
+            <div style="padding:14px 20px; display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #667eea, #764ba2); display:flex; align-items:center; justify-content:center; font-size:18px;">👨‍👩‍👧‍👦</div>
+                    <div>
+                        <div style="font-size:15px; font-weight:700; color:#333;">{{ auth.family_name }}</div>
+                        <div style="font-size:11px; color:#999;">{% if members|length > 1 %}{{ members|length }} members{% else %}Invite your family{% endif %}</div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <button onclick="copyInvite()" id="copyBtn" style="background:#f0f2ff; color:#667eea; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; width:auto; box-shadow:none; transform:none;">Invite</button>
+                    <button onclick="showQR()" style="background:#f0f2ff; color:#667eea; border:none; padding:7px 10px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; width:auto; box-shadow:none; transform:none;">QR</button>
+                </div>
+            </div>
+            <div id="qrWrap" style="display:none;text-align:center;padding:16px 20px; background:#f8f9ff;">
+                <img src="/invite-qr/{{ invite_code }}" alt="QR Code" style="width:160px;height:160px;border-radius:12px;">
+                <div style="font-size:11px;color:#999;margin-top:6px;">Scan to join {{ auth.family_name }}</div>
+            </div>
         </div>
-        {% endif %}
     </div>
     </div><!-- /page-content -->
 
