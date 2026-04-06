@@ -758,7 +758,7 @@
         <div class="header">
             <div class="logo">📅</div>
             <h1>FamPilot</h1>
-            <p>Snap, speak, or type — your family AI handles the rest</p>
+            <p>Just talk — your AI assistant handles the rest</p>
         </div>
 
         <!-- Triggered reminder banners -->
@@ -854,7 +854,42 @@
         </div>
         {% endif %}
 
+        <!-- Quick Actions for new users -->
+        {% if not later_items and not briefing and not risk_items %}
+        <div class="upcoming-section" style="text-align:center; padding: 20px 16px;">
+            <div style="font-size: 28px; margin-bottom: 10px;">🎙️</div>
+            <div style="font-size: 16px; font-weight: 700; color: white; margin-bottom: 6px;">Try it now — tap the mic button below</div>
+            <div style="font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 16px;">Say any of these:</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
+                <span style="background: rgba(255,255,255,0.15); border-radius: 20px; padding: 7px 14px; font-size: 13px; color: rgba(255,255,255,0.9);">"Add milk to groceries"</span>
+                <span style="background: rgba(255,255,255,0.15); border-radius: 20px; padding: 7px 14px; font-size: 13px; color: rgba(255,255,255,0.9);">"Plan meals for the week"</span>
+                <span style="background: rgba(255,255,255,0.15); border-radius: 20px; padding: 7px 14px; font-size: 13px; color: rgba(255,255,255,0.9);">"Create a chore for dishes"</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Quick nav to lists/chores/meals -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px;">
+            <a href="/lists" style="text-decoration:none; background: rgba(255,255,255,0.12); border-radius: 12px; padding: 14px 8px; text-align: center; transition: background 0.15s;">
+                <div style="font-size: 22px; margin-bottom: 4px;">🛒</div>
+                <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.8);">Lists</div>
+            </a>
+            <a href="/chores" style="text-decoration:none; background: rgba(255,255,255,0.12); border-radius: 12px; padding: 14px 8px; text-align: center; transition: background 0.15s;">
+                <div style="font-size: 22px; margin-bottom: 4px;">🧹</div>
+                <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.8);">Chores</div>
+            </a>
+            <a href="/meals" style="text-decoration:none; background: rgba(255,255,255,0.12); border-radius: 12px; padding: 14px 8px; text-align: center; transition: background 0.15s;">
+                <div style="font-size: 22px; margin-bottom: 4px;">🍽️</div>
+                <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.8);">Meals</div>
+            </a>
+            <a href="/history" style="text-decoration:none; background: rgba(255,255,255,0.12); border-radius: 12px; padding: 14px 8px; text-align: center; transition: background 0.15s;">
+                <div style="font-size: 22px; margin-bottom: 4px;">📅</div>
+                <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.8);">Calendar</div>
+            </a>
+        </div>
+
         <!-- Coming Up (future only, max 3) -->
+        {% if later_items %}
         <div class="upcoming-section">
             <div class="upcoming-header">
                 <span class="upcoming-header-title">📅 Coming Up</span>
@@ -863,7 +898,6 @@
                 {% endif %}
             </div>
 
-            {% if later_items %}
             {% for row in later_items %}
             <a href="/history/{{ row.id }}" class="upcoming-item" data-id="{{ row.id }}">
                 <span class="upcoming-icon">
@@ -878,15 +912,8 @@
                 <span class="upcoming-arrow">›</span>
             </a>
             {% endfor %}
-            {% else %}
-            <div class="upcoming-empty">
-                <div class="upcoming-empty-icon">📭</div>
-                <div class="upcoming-empty-primary">Nothing coming up</div>
-                <div class="upcoming-empty-secondary">Add a photo or note to get started</div>
-                <a class="upcoming-empty-cta" href="#" onclick="focusInput(event)">Add something</a>
-            </div>
-            {% endif %}
         </div>
+        {% endif %}
 
         <!-- Main Card -->
         <div class="card">
@@ -931,7 +958,7 @@
 
                 <!-- Features -->
                 <div class="features">
-                    <div class="features-title">What AI extracts from photos & text</div>
+                    <div class="features-title">Upload a photo or paste text to extract</div>
                     <div class="feature">
                         <span class="feature-icon">📅</span>
                         <span class="feature-text">Events — dates, times, locations</span>
@@ -943,6 +970,10 @@
                     <div class="feature">
                         <span class="feature-icon">🔔</span>
                         <span class="feature-text">Reminders — never forget again</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">💡</span>
+                        <span class="feature-text">Tip: use the mic button for everything else</span>
                     </div>
                 </div>
             </div>
