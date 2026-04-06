@@ -862,26 +862,6 @@
         </div>
         {% endif %}
 
-        <!-- Quick nav to lists/chores/meals -->
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px;">
-            <a href="/lists" style="text-decoration:none; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 16px 8px; text-align: center; transition: all 0.15s;">
-                <div style="font-size: 24px; margin-bottom: 6px;">🛒</div>
-                <div style="font-size: 12px; font-weight: 700; color: white;">Lists</div>
-            </a>
-            <a href="/chores" style="text-decoration:none; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 16px 8px; text-align: center; transition: all 0.15s;">
-                <div style="font-size: 24px; margin-bottom: 6px;">🧹</div>
-                <div style="font-size: 12px; font-weight: 700; color: white;">Chores</div>
-            </a>
-            <a href="/meals" style="text-decoration:none; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 16px 8px; text-align: center; transition: all 0.15s;">
-                <div style="font-size: 24px; margin-bottom: 6px;">🍽️</div>
-                <div style="font-size: 12px; font-weight: 700; color: white;">Meals</div>
-            </a>
-            <a href="/history" style="text-decoration:none; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 16px 8px; text-align: center; transition: all 0.15s;">
-                <div style="font-size: 24px; margin-bottom: 6px;">📅</div>
-                <div style="font-size: 12px; font-weight: 700; color: white;">Calendar</div>
-            </a>
-        </div>
-
         <!-- Coming Up (future only, max 3) -->
         {% if later_items %}
         <div class="upcoming-section">
