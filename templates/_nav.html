@@ -10,31 +10,19 @@
 .top-nav {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     max-width: 760px;
     margin: 0 auto;
-    padding: 10px 16px;
-    gap: 10px;
+    padding: 8px 12px;
+    gap: 6px;
 }
-.nav-brand {
-    color: white;
-    text-decoration: none;
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    flex-shrink: 0;
-}
-.nav-brand:hover { opacity: 0.85; }
-.nav-links { display: flex; gap: 6px; }
+.nav-links { display: flex; gap: 6px; width: 100%; justify-content: center; }
 .nav-link {
     color: rgba(255, 255, 255, 0.95);
     text-decoration: none;
     font-size: 13px;
     font-weight: 600;
-    padding: 6px 12px;
+    padding: 7px 14px;
     border: 1.5px solid rgba(255, 255, 255, 0.3);
     border-radius: 8px;
     transition: background 0.15s, border-color 0.15s;
@@ -42,6 +30,8 @@
     display: flex;
     align-items: center;
     gap: 4px;
+    flex: 1;
+    justify-content: center;
 }
 .nav-link:hover {
     background: rgba(255, 255, 255, 0.15);
@@ -53,8 +43,7 @@
     color: white;
 }
 @media (max-width: 400px) {
-    .nav-link { padding: 6px 9px; font-size: 12px; }
-    .nav-brand { font-size: 15px; }
+    .nav-link { padding: 6px 8px; font-size: 11px; gap: 2px; }
 }
 
 /* ── Global Voice FAB ── */
@@ -177,8 +166,8 @@
 
 <div class="top-nav-wrap">
     <nav class="top-nav">
-        <a href="/" class="nav-brand">FamPilot</a>
         <div class="nav-links">
+            <a href="/" class="nav-link {% if nav_page == 'home' %}nav-active{% endif %}">🏠</a>
             <a href="/lists" class="nav-link {% if nav_page == 'lists' %}nav-active{% endif %}">🛒 Lists</a>
             <a href="/chores" class="nav-link {% if nav_page == 'chores' %}nav-active{% endif %}">🧹 Chores</a>
             <a href="/meals" class="nav-link {% if nav_page == 'meals' %}nav-active{% endif %}">🍽️ Meals</a>
