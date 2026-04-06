@@ -238,7 +238,7 @@
         el.style.display = 'block';
     }
 
-    async function gvExec(text) {
+    window.gvExec = async function gvExec(text) {
         if (!text) return;
         gvShow('Processing...');
 
