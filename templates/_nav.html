@@ -113,16 +113,23 @@
 }
 .gv-text {
     position: fixed;
-    bottom: 94px;
+    bottom: 96px;
     left: 20px;
     right: 20px;
     text-align: center;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     z-index: 91;
-    color: white;
-    text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+    color: #333;
+    background: white;
+    padding: 12px 20px;
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    max-width: 440px;
+    margin: 0 auto;
     pointer-events: none;
+    animation: gvSlideUp 0.2s ease-out;
+    text-shadow: none;
 }
 .gv-toast {
     position: fixed;
