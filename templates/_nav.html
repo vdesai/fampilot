@@ -204,6 +204,8 @@
         if (label) label.style.display = 'none';
     }
 
+    let _gvTimeout = null;
+
     function gvStart() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) { alert('Speech not supported. Try Chrome or Safari.'); return; }
@@ -217,21 +219,33 @@
         document.getElementById('gvFab').classList.add('gv-listening');
         gvShow('Listening...');
 
+        // Auto-stop after 10 seconds of listening
+        _gvTimeout = setTimeout(() => { if (_gvOn) gvStop(); }, 10000);
+
         _gvRec.onresult = (e) => {
             let t = '';
             for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
             gvShow(t || 'Listening...');
-            if (e.results[e.results.length - 1].isFinal) gvExec(t.trim());
+            if (e.results[e.results.length - 1].isFinal) {
+                clearTimeout(_gvTimeout);
+                gvExec(t.trim());
+            }
         };
-        _gvRec.onend = () => { gvCleanup(); };
-        _gvRec.onerror = () => { gvCleanup(); };
+        _gvRec.onend = () => { clearTimeout(_gvTimeout); gvCleanup(); };
+        _gvRec.onerror = () => { clearTimeout(_gvTimeout); gvCleanup(); };
         _gvRec.start();
     }
 
     function gvStop() {
+        clearTimeout(_gvTimeout);
         if (_gvRec) _gvRec.stop();
         gvCleanup();
     }
+
+    // Stop mic when user leaves the page or switches apps
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && _gvOn) gvStop();
+    });
 
     function gvCleanup() {
         _gvOn = false;
