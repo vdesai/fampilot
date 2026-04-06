@@ -62,15 +62,15 @@
     position: fixed;
     bottom: 24px;
     right: 24px;
-    width: 60px;
-    height: 60px;
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    font-size: 26px;
+    background: #ffffff;
+    color: #667eea;
+    border: 3px solid #667eea;
+    font-size: 28px;
     cursor: pointer;
-    box-shadow: 0 4px 20px rgba(102,126,234,0.4);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2), 0 0 0 4px rgba(102,126,234,0.15);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -78,16 +78,49 @@
     transition: transform 0.15s, box-shadow 0.15s;
 }
 .gv-fab:hover {
-    transform: scale(1.08);
-    box-shadow: 0 6px 28px rgba(102,126,234,0.5);
+    transform: scale(1.1);
+    box-shadow: 0 6px 32px rgba(0,0,0,0.25), 0 0 0 6px rgba(102,126,234,0.2);
 }
 .gv-fab.gv-listening {
     background: #ff4444;
+    color: white;
+    border-color: #ff4444;
     animation: gvPulse 1.2s ease-in-out infinite;
 }
 @keyframes gvPulse {
-    0%, 100% { transform: scale(1); box-shadow: 0 4px 20px rgba(255,68,68,0.4); }
-    50% { transform: scale(1.1); box-shadow: 0 6px 30px rgba(255,68,68,0.6); }
+    0%, 100% { transform: scale(1); box-shadow: 0 4px 20px rgba(255,68,68,0.4), 0 0 0 4px rgba(255,68,68,0.2); }
+    50% { transform: scale(1.1); box-shadow: 0 6px 30px rgba(255,68,68,0.6), 0 0 0 8px rgba(255,68,68,0.15); }
+}
+/* Label under mic on first visit */
+.gv-label {
+    position: fixed;
+    bottom: 92px;
+    right: 16px;
+    background: white;
+    color: #333;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    z-index: 90;
+    animation: gvLabelBounce 2s ease-in-out infinite;
+    pointer-events: none;
+}
+.gv-label::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    right: 24px;
+    width: 12px;
+    height: 12px;
+    background: white;
+    transform: rotate(45deg);
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.08);
+}
+@keyframes gvLabelBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
 }
 .gv-text {
     position: fixed;
@@ -157,6 +190,7 @@
 
 <!-- Global voice FAB — appears on every page -->
 <button class="gv-fab" id="gvFab" onclick="gvToggle()">🎙️</button>
+<div class="gv-label" id="gvLabel">Tap to talk</div>
 <div class="gv-text" id="gvText" style="display:none;"></div>
 
 <script>
@@ -164,8 +198,16 @@
     let _gvRec = null, _gvOn = false;
 
     window.gvToggle = function() {
+        // Hide the tooltip label permanently
+        const label = document.getElementById('gvLabel');
+        if (label) { label.style.display = 'none'; localStorage.setItem('gv_used', '1'); }
         _gvOn ? gvStop() : gvStart();
     };
+    // Hide label if user has used mic before
+    if (localStorage.getItem('gv_used')) {
+        const label = document.getElementById('gvLabel');
+        if (label) label.style.display = 'none';
+    }
 
     function gvStart() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
