@@ -730,6 +730,9 @@
             font-size: 14px;
         }
 
+        /* Tappable feedback */
+        .action-btn:active { transform: scale(0.96); }
+
         /* Responsive */
         @media (max-width: 600px) {
             .card-body {
@@ -785,15 +788,15 @@
         <!-- Two main actions -->
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
             <!-- Voice -->
-            <div onclick="gvToggle()" style="cursor:pointer; background:white; border-radius:20px; padding:20px 14px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.08); transition:transform 0.15s;">
+            <div onclick="gvToggle()" style="cursor:pointer; background:white; border-radius:20px; padding:20px 14px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.08); border:2px solid #667eea; transition:transform 0.15s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);" class="action-btn">
                 <div style="font-size:32px; margin-bottom:8px;">🎙️</div>
-                <div style="font-size:15px; font-weight:700; color:#333;">Talk</div>
+                <div style="font-size:15px; font-weight:700; color:#667eea;">Talk</div>
                 <div style="font-size:11px; color:#999; margin-top:2px;">Say what you need</div>
             </div>
             <!-- Scan — directly opens file picker -->
-            <div onclick="document.getElementById('fileInput').click();" style="cursor:pointer; background:white; border-radius:20px; padding:20px 14px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.08); transition:transform 0.15s;">
+            <div onclick="document.getElementById('fileInput').click();" style="cursor:pointer; background:white; border-radius:20px; padding:20px 14px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.08); border:2px solid #667eea; transition:transform 0.15s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);" class="action-btn">
                 <div style="font-size:32px; margin-bottom:8px;">📸</div>
-                <div style="font-size:15px; font-weight:700; color:#333;">Scan</div>
+                <div style="font-size:15px; font-weight:700; color:#667eea;">Scan</div>
                 <div style="font-size:11px; color:#999; margin-top:2px;">Photo or text</div>
             </div>
         </div>
@@ -803,9 +806,9 @@
             <div style="padding:14px 16px;">
                 <div style="font-size:11px; font-weight:700; color:#999; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Try saying:</div>
                 <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                    <span onclick="gvExec('Add milk to groceries')" style="background:#f0f2ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:background 0.15s;">"Add milk to groceries"</span>
-                    <span onclick="gvExec('Plan meals for the week')" style="background:#f0f2ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:background 0.15s;">"Plan meals for the week"</span>
-                    <span onclick="gvExec('Create a chore for dishes')" style="background:#f0f2ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:background 0.15s;">"Create a chore for dishes"</span>
+                    <span onclick="gvExec('Add milk to groceries')" style="background:#f0f2ff; border:1.5px solid #d0d8ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:600; cursor:pointer; transition:all 0.15s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);">&#9654; "Add milk to groceries"</span>
+                    <span onclick="gvExec('Plan meals for the week')" style="background:#f0f2ff; border:1.5px solid #d0d8ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:600; cursor:pointer; transition:all 0.15s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);">&#9654; "Plan meals for the week"</span>
+                    <span onclick="gvExec('Create a chore for dishes')" style="background:#f0f2ff; border:1.5px solid #d0d8ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:600; cursor:pointer; transition:all 0.15s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);">&#9654; "Create a chore for dishes"</span>
                 </div>
             </div>
         </div>
