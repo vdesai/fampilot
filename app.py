@@ -481,6 +481,48 @@ async def home(request: Request):
 
     members = db.get_family_members(family_id)
 
+    # Build smart briefing summary
+    from datetime import datetime as dt
+    hour = dt.now().hour
+    if hour < 12:
+        greeting = "Good morning"
+    elif hour < 17:
+        greeting = "Good afternoon"
+    else:
+        greeting = "Good evening"
+
+    summary_parts = []
+    if today_items:
+        if len(today_items) == 1:
+            t = today_items[0]
+            time_str = f" at {t['time']}" if t.get('time') else ""
+            summary_parts.append(f"You have 1 event today — {t['title']}{time_str}.")
+        else:
+            summary_parts.append(f"You have {len(today_items)} events today.")
+    if later_items:
+        summary_parts.append(f"{len(later_items)} more coming up this week.")
+
+    lists = db.get_lists(family_id)
+    total_list_items = 0
+    for lst in lists:
+        items = db.get_list_items(lst["id"])
+        total_list_items += sum(1 for i in items if not i.get("checked"))
+    if total_list_items > 0:
+        summary_parts.append(f"{total_list_items} items on your lists.")
+
+    chores_today = db.get_chores_with_status(family_id, today_str)
+    pending_chores = [c for c in chores_today if not c.get("done_today")]
+    if pending_chores:
+        if len(pending_chores) == 1:
+            summary_parts.append(f"\"{pending_chores[0]['title']}\" still pending.")
+        else:
+            summary_parts.append(f"{len(pending_chores)} chores still pending.")
+
+    if not summary_parts:
+        summary_parts.append("All clear — nothing scheduled.")
+
+    smart_summary = f"{greeting}, {auth['display_name']}. " + " ".join(summary_parts)
+
     return templates.TemplateResponse(request, "index.html", {
         "request":             request,
         "nav_page":            "home",
@@ -497,6 +539,7 @@ async def home(request: Request):
         "members":             members,
         "usage":               db.get_usage_info(family_id),
         "recent_activity":     db.get_recent_activity(family_id, limit=10),
+        "smart_summary":       smart_summary,
     })
 
 

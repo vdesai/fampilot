@@ -779,10 +779,9 @@
             <button class="install-btn" onclick="installApp()">Install</button>
         </div>
 
-        <!-- Greeting -->
+        <!-- Smart Briefing -->
         <div style="text-align:center; padding:8px 0 16px;">
-            <div style="font-size:22px; font-weight:700; color:white;">Hi, {{ auth.display_name or auth.family_name }} 👋</div>
-            <div style="font-size:13px; color:rgba(255,255,255,0.7); margin-top:2px;">What can I help with?</div>
+            <div style="font-size:14px; color:rgba(255,255,255,0.95); line-height:1.5; max-width:340px; margin:0 auto;">{{ smart_summary }}</div>
         </div>
 
         <!-- Two main actions -->
