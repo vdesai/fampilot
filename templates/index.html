@@ -788,10 +788,10 @@
         <!-- Two main actions -->
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
             <!-- Voice -->
-            <div onclick="gvToggle()" style="cursor:pointer; background:white; border-radius:20px; padding:20px 14px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.08); border:2px solid #667eea; transition:transform 0.15s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);" class="action-btn">
+            <div id="talkBtn" onclick="gvToggle()" style="cursor:pointer; background:white; border-radius:20px; padding:20px 14px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.08); border:2px solid #667eea; transition:all 0.2s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);" class="action-btn">
                 <div style="font-size:32px; margin-bottom:8px;">🎙️</div>
-                <div style="font-size:15px; font-weight:700; color:#667eea;">Talk</div>
-                <div style="font-size:11px; color:#999; margin-top:2px;">Say what you need</div>
+                <div id="talkLabel" style="font-size:15px; font-weight:700; color:#667eea;">Talk</div>
+                <div id="talkSub" style="font-size:11px; color:#999; margin-top:2px;">Say what you need</div>
             </div>
             <!-- Scan — directly opens file picker -->
             <div onclick="document.getElementById('fileInput').click();" style="cursor:pointer; background:white; border-radius:20px; padding:20px 14px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.08); border:2px solid #667eea; transition:transform 0.15s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);" class="action-btn">
@@ -1099,6 +1099,33 @@
         window.addEventListener('appinstalled', () => {
             document.getElementById('installBanner')?.classList.add('install-hidden');
         });
+
+        // Update Talk button when mic is active
+        const _origGvStart = window.gvToggle;
+        const _talkObserver = new MutationObserver(() => {
+            const fab = document.getElementById('gvFab');
+            const btn = document.getElementById('talkBtn');
+            const label = document.getElementById('talkLabel');
+            const sub = document.getElementById('talkSub');
+            if (!fab || !btn) return;
+            if (fab.classList.contains('gv-listening')) {
+                btn.style.background = '#ff4444';
+                btn.style.borderColor = '#ff4444';
+                label.style.color = 'white';
+                label.textContent = 'Listening...';
+                sub.style.color = 'rgba(255,255,255,0.8)';
+                sub.textContent = 'Tap to stop';
+            } else {
+                btn.style.background = 'white';
+                btn.style.borderColor = '#667eea';
+                label.style.color = '#667eea';
+                label.textContent = 'Talk';
+                sub.style.color = '#999';
+                sub.textContent = 'Say what you need';
+            }
+        });
+        const _fab = document.getElementById('gvFab');
+        if (_fab) _talkObserver.observe(_fab, { attributes: true, attributeFilter: ['class'] });
 
         // Relative timestamps for activity feed
         document.querySelectorAll('[data-ts]').forEach(el => {
