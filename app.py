@@ -496,6 +496,7 @@ async def home(request: Request):
         "join_url":            join_url,
         "members":             members,
         "usage":               db.get_usage_info(family_id),
+        "recent_activity":     db.get_recent_activity(family_id, limit=10),
     })
 
 
@@ -1090,7 +1091,9 @@ async def create_list(request: Request, name: str = Form(...), icon: str = Form(
     if not auth:
         return RedirectResponse(url="/welcome", status_code=303)
     list_id = str(uuid4())
-    db.create_list(list_id, auth["family_id"], name.strip() or "Shopping List", icon)
+    list_name = name.strip() or "Shopping List"
+    db.create_list(list_id, auth["family_id"], list_name, icon)
+    db.log_activity(auth["family_id"], auth["display_name"], f"created list \"{list_name}\"", "list_created")
     return RedirectResponse(url=f"/lists/{list_id}", status_code=303)
 
 
@@ -1132,6 +1135,11 @@ async def add_to_list(request: Request, list_id: str, text: str = Form(...)):
         item_id = str(uuid4())
         db.add_list_item(item_id, list_id, line, added_by=auth["display_name"])
         added.append({"id": item_id, "text": line})
+    if added:
+        items_text = ", ".join(a["text"] for a in added[:3])
+        if len(added) > 3:
+            items_text += f" +{len(added)-3} more"
+        db.log_activity(auth["family_id"], auth["display_name"], f"added {items_text} to {lst['name']}", "list_item_added")
     # If request is AJAX, return JSON; otherwise redirect
     if request.headers.get("accept", "").startswith("application/json"):
         return JSONResponse({"ok": True, "added": added})
@@ -1203,8 +1211,10 @@ async def create_chore_route(request: Request,
     if not auth:
         return RedirectResponse(url="/welcome", status_code=303)
     chore_id = str(uuid4())
-    db.create_chore(chore_id, auth["family_id"], title.strip(),
+    chore_title = title.strip()
+    db.create_chore(chore_id, auth["family_id"], chore_title,
                     icon=icon, assigned_to=assigned_to, recurrence=recurrence)
+    db.log_activity(auth["family_id"], auth["display_name"], f"created chore \"{chore_title}\"", "chore_created")
     return RedirectResponse(url="/chores", status_code=303)
 
 
@@ -1216,6 +1226,9 @@ async def mark_chore_done(request: Request, chore_id: str):
     today_str = _local_today().isoformat()
     log_id = str(uuid4())
     db.log_chore_done(log_id, chore_id, auth["display_name"], today_str)
+    chore = db.get_chore(chore_id)
+    if chore:
+        db.log_activity(auth["family_id"], auth["display_name"], f"completed \"{chore['title']}\"", "chore_done")
     streak = db.get_chore_streak(chore_id, today_str)
     return JSONResponse({"ok": True, "streak": streak})
 
@@ -1545,6 +1558,8 @@ Voice command: "{text}"
                 item_id = str(uuid4())
                 db.add_list_item(item_id, list_id, item_text, added_by=auth["display_name"])
                 added.append({"id": item_id, "text": item_text})
+            items_text = ", ".join(a["text"] for a in added[:3])
+            db.log_activity(family_id, auth["display_name"], f"added {items_text} to {lst['name']}", "list_item_added")
             return JSONResponse({
                 "action": "added_to_list",
                 "list_name": lst["name"],
@@ -1562,6 +1577,7 @@ Voice command: "{text}"
             item_id = str(uuid4())
             db.add_list_item(item_id, list_id, item_text, added_by=auth["display_name"])
             added.append({"id": item_id, "text": item_text})
+        db.log_activity(family_id, auth["display_name"], f"created \"{list_name}\" with {len(added)} items", "list_created")
         return JSONResponse({
             "action": "created_list_and_added",
             "list_name": list_name,
@@ -1577,6 +1593,7 @@ Voice command: "{text}"
             log_id = str(uuid4())
             db.log_chore_done(log_id, chore_id, auth["display_name"], today_str)
             streak = db.get_chore_streak(chore_id, today_str)
+            db.log_activity(family_id, auth["display_name"], f"completed \"{chore['title']}\"", "chore_done")
             return JSONResponse({
                 "action": "chore_done",
                 "chore_title": chore["title"],
@@ -1591,6 +1608,7 @@ Voice command: "{text}"
             recurrence = result.get("recurrence", "daily")
             db.create_chore(chore_id, family_id, title,
                             assigned_to=assigned, recurrence=recurrence)
+            db.log_activity(family_id, auth["display_name"], f"created chore \"{title}\"", "chore_created")
             return JSONResponse({
                 "action": "chore_created",
                 "title": title,

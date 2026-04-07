@@ -227,6 +227,14 @@ _SCHEMA = [
         preferences TEXT,
         meals_json  TEXT NOT NULL
     )""",
+    """CREATE TABLE IF NOT EXISTS activity_log (
+        id          TEXT PRIMARY KEY,
+        family_id   TEXT NOT NULL,
+        member_name TEXT NOT NULL,
+        action      TEXT NOT NULL,
+        action_type TEXT NOT NULL,
+        created_at  TEXT NOT NULL
+    )""",
 ]
 
 
@@ -764,6 +772,24 @@ def get_usage_info(family_id: str) -> dict:
         "scans_remaining": max(0, FREE_SCAN_LIMIT - count) if not premium else 999,
         "can_scan": premium or count < FREE_SCAN_LIMIT,
     }
+
+
+# ── Activity Log ──
+
+def log_activity(family_id: str, member_name: str, action: str, action_type: str) -> None:
+    from uuid import uuid4
+    _execute(
+        "INSERT INTO activity_log (id, family_id, member_name, action, action_type, created_at) VALUES (?,?,?,?,?,?)",
+        (str(uuid4()), family_id, member_name, action, action_type,
+         datetime.now(timezone.utc).isoformat()),
+    )
+
+
+def get_recent_activity(family_id: str, limit: int = 15) -> list:
+    rows = _execute(
+        "SELECT * FROM activity_log WHERE family_id = ? ORDER BY created_at DESC LIMIT ?",
+        (family_id, limit), fetch='all')
+    return rows or []
 
 
 # Initialise on import
