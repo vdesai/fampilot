@@ -301,6 +301,14 @@
             if (window.location.pathname === '/chores') {
                 setTimeout(() => window.location.reload(), 1200);
             }
+        } else if (data.action === 'added_to_inventory') {
+            gvToast(
+                `Added ${data.items.length} item${data.items.length === 1 ? '' : 's'} to Pantry`,
+                data.items.map(i => i.text).join(', ')
+            );
+            if (window.location.pathname === `/lists/${data.list_id}`) {
+                setTimeout(() => window.location.reload(), 1200);
+            }
         } else if (data.action === 'meal_plan_generated') {
             gvToast(`Meal plan generated!`, `${data.days}-day plan ready`);
             setTimeout(() => window.location.href = '/meals', 1200);

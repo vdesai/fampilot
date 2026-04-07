@@ -1570,7 +1570,12 @@ Return ONLY a JSON object with one of these actions:
    - Default to 7 days if not specified.
    - Include any dietary preferences mentioned (e.g. "vegetarian", "no dairy").
 
-6. Not sure: {{"action": "unknown", "text": "the original text"}}
+6. Add to home inventory/pantry: {{"action": "add_to_inventory", "items": ["item1", "item2"]}}
+   - Use this when someone says what they HAVE at home, not what they NEED to buy.
+   - "I have rice, chicken, and tomatoes" → inventory
+   - "We have 2 dozen eggs" → inventory
+
+7. Not sure: {{"action": "unknown", "text": "the original text"}}
 
 Be smart. "Mark dishes done" matches a chore with "dishes" in the title.
 "Add milk to groceries" matches a list named "Groceries".
@@ -1579,6 +1584,8 @@ Be smart. "Mark dishes done" matches a chore with "dishes" in the title.
 "Dentist Tuesday 3pm" creates a calendar event.
 "Plan meals for the week" generates a meal plan.
 "Make a 5 day vegetarian meal plan" generates a 5-day vegetarian meal plan.
+"I have rice and chicken" adds to home inventory.
+"We have milk, eggs, and bread" adds to home inventory.
 
 Voice command: "{text}"
 """}],
@@ -1713,6 +1720,33 @@ Rules:
             return JSONResponse({
                 "action": "error",
                 "message": "Failed to generate meal plan. Please try again.",
+            })
+
+    elif result.get("action") == "add_to_inventory":
+        items = result.get("items", [])
+        if items:
+            # Find or create a Pantry list
+            pantry = None
+            for l in lists:
+                if l["name"].lower() in ("pantry", "inventory", "home inventory"):
+                    pantry = l
+                    break
+            if not pantry:
+                pantry_id = str(uuid4())
+                db.create_list(pantry_id, family_id, "Pantry", icon="🏠")
+                pantry = {"id": pantry_id, "name": "Pantry"}
+            added = []
+            for item_text in items:
+                item_id = str(uuid4())
+                db.add_list_item(item_id, pantry["id"], item_text, added_by=auth["display_name"])
+                added.append({"id": item_id, "text": item_text})
+            items_text = ", ".join(a["text"] for a in added[:3])
+            db.log_activity(family_id, auth["display_name"], f"added {items_text} to Pantry", "inventory_added")
+            return JSONResponse({
+                "action": "added_to_inventory",
+                "list_name": pantry["name"],
+                "list_id": pantry["id"],
+                "items": added,
             })
 
     elif result.get("action") == "create_event":
