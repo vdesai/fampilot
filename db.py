@@ -235,6 +235,18 @@ _SCHEMA = [
         action_type TEXT NOT NULL,
         created_at  TEXT NOT NULL
     )""",
+    """CREATE TABLE IF NOT EXISTS push_subscriptions (
+        endpoint        TEXT PRIMARY KEY,
+        device_id       TEXT NOT NULL,
+        member_id       TEXT NOT NULL,
+        family_id       TEXT NOT NULL,
+        p256dh          TEXT NOT NULL,
+        auth            TEXT NOT NULL,
+        user_agent      TEXT,
+        created_at      TEXT NOT NULL,
+        last_success_at TEXT,
+        failure_count   INTEGER DEFAULT 0
+    )""",
 ]
 
 
@@ -790,6 +802,58 @@ def get_recent_activity(family_id: str, limit: int = 15) -> list:
         "SELECT * FROM activity_log WHERE family_id = ? ORDER BY created_at DESC LIMIT ?",
         (family_id, limit), fetch='all')
     return rows or []
+
+
+# ── Push Subscriptions ──
+
+def save_push_subscription(endpoint: str, device_id: str, member_id: str,
+                           family_id: str, p256dh: str, auth: str,
+                           user_agent: str = "") -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    if USE_POSTGRES:
+        _execute(
+            """INSERT INTO push_subscriptions
+               (endpoint, device_id, member_id, family_id, p256dh, auth, user_agent, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT (endpoint) DO UPDATE SET
+                   device_id = EXCLUDED.device_id,
+                   member_id = EXCLUDED.member_id,
+                   family_id = EXCLUDED.family_id,
+                   p256dh = EXCLUDED.p256dh,
+                   auth = EXCLUDED.auth,
+                   user_agent = EXCLUDED.user_agent""",
+            (endpoint, device_id, member_id, family_id, p256dh, auth, user_agent, now),
+        )
+    else:
+        _execute(
+            """INSERT OR REPLACE INTO push_subscriptions
+               (endpoint, device_id, member_id, family_id, p256dh, auth, user_agent, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (endpoint, device_id, member_id, family_id, p256dh, auth, user_agent, now),
+        )
+
+
+def delete_push_subscription(endpoint: str) -> None:
+    _execute("DELETE FROM push_subscriptions WHERE endpoint = ?", (endpoint,))
+
+
+def get_push_subscriptions_for_member(member_id: str) -> list:
+    return _execute(
+        "SELECT * FROM push_subscriptions WHERE member_id = ?",
+        (member_id,), fetch='all') or []
+
+
+def get_push_subscriptions_for_family(family_id: str) -> list:
+    return _execute(
+        "SELECT * FROM push_subscriptions WHERE family_id = ?",
+        (family_id,), fetch='all') or []
+
+
+def mark_push_success(endpoint: str) -> None:
+    _execute(
+        "UPDATE push_subscriptions SET last_success_at = ?, failure_count = 0 WHERE endpoint = ?",
+        (datetime.now(timezone.utc).isoformat(), endpoint),
+    )
 
 
 # ── Pattern Detection (agentic suggestions) ──

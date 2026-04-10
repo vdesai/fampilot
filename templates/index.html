@@ -948,6 +948,16 @@
                 <img src="/invite-qr/{{ invite_code }}" alt="QR Code" style="width:160px;height:160px;border-radius:12px;">
                 <div style="font-size:11px;color:#999;margin-top:6px;">Scan to join {{ auth.family_name }}</div>
             </div>
+            <div id="pushRow" style="display:none; padding:14px 20px; border-top:1px solid #f0f0f0; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:18px;">🔔</span>
+                    <div>
+                        <div style="font-size:14px; font-weight:600; color:#333;">Notifications</div>
+                        <div id="pushStatus" style="font-size:11px; color:#999;">Get reminders and family updates</div>
+                    </div>
+                </div>
+                <button id="pushToggleBtn" onclick="togglePush()" style="background:#667eea; color:white; border:none; padding:8px 14px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; width:auto; box-shadow:none; transform:none;">Enable</button>
+            </div>
         </div>
     </div>
     </div><!-- /page-content -->
@@ -1117,6 +1127,113 @@
         window.addEventListener('appinstalled', () => {
             document.getElementById('installBanner')?.classList.add('install-hidden');
         });
+
+        // ── Push Notifications ──
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = atob(base64);
+            return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+        }
+
+        async function initPush() {
+            const row = document.getElementById('pushRow');
+            if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+                return;
+            }
+            // iOS PWA detection
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            if (isIOS && !isStandalone) {
+                row.style.display = 'flex';
+                document.getElementById('pushStatus').textContent = 'Add to Home Screen first';
+                document.getElementById('pushToggleBtn').textContent = 'How';
+                document.getElementById('pushToggleBtn').onclick = () => alert('To enable notifications on iPhone:\n\n1. Tap the Share button (square with arrow)\n2. Select "Add to Home Screen"\n3. Open FamPilot from your home screen\n4. Come back here and enable notifications');
+                return;
+            }
+
+            row.style.display = 'flex';
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const existing = await reg.pushManager.getSubscription();
+                updatePushUI(!!existing);
+            } catch (e) {
+                console.error('Push init error', e);
+            }
+        }
+
+        function updatePushUI(subscribed) {
+            const btn = document.getElementById('pushToggleBtn');
+            const status = document.getElementById('pushStatus');
+            if (subscribed) {
+                btn.textContent = 'Disable';
+                btn.style.background = '#f0f2ff';
+                btn.style.color = '#667eea';
+                status.textContent = 'You\'ll get reminders and updates';
+            } else {
+                btn.textContent = 'Enable';
+                btn.style.background = '#667eea';
+                btn.style.color = 'white';
+                status.textContent = 'Get reminders and family updates';
+            }
+        }
+
+        async function togglePush() {
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const existing = await reg.pushManager.getSubscription();
+
+                if (existing) {
+                    // Unsubscribe
+                    await fetch('/api/push/subscribe', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ endpoint: existing.endpoint }),
+                    });
+                    await existing.unsubscribe();
+                    updatePushUI(false);
+                    return;
+                }
+
+                // Subscribe
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    alert('Notifications were blocked. You can enable them in your browser settings.');
+                    return;
+                }
+
+                const keyRes = await fetch('/api/push/vapid-key');
+                const { key } = await keyRes.json();
+                if (!key) {
+                    alert('Notifications are not configured yet.');
+                    return;
+                }
+
+                const sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(key),
+                });
+
+                await fetch('/api/push/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subscription: sub.toJSON() }),
+                });
+
+                updatePushUI(true);
+
+                // Send a test notification
+                await fetch('/api/push/test', { method: 'POST' });
+            } catch (e) {
+                console.error('Push toggle error', e);
+                alert('Could not enable notifications. ' + e.message);
+            }
+        }
+
+        // Initialize push UI after SW is ready
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(initPush);
+        }
 
         // Accept smart suggestion
         async function acceptSuggestion(listId, text, rowId) {

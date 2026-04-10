@@ -21,6 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 import db
+import push as push_module
 
 # Import functions from main.py
 from main import (
@@ -1184,6 +1185,14 @@ async def add_to_list(request: Request, list_id: str, text: str = Form(...)):
         if len(added) > 3:
             items_text += f" +{len(added)-3} more"
         db.log_activity(auth["family_id"], auth["display_name"], f"added {items_text} to {lst['name']}", "list_item_added")
+        push_module.send_to_family(
+            auth["family_id"],
+            title=f"{auth['display_name']} added to {lst['name']}",
+            body=items_text,
+            url=f"/lists/{list_id}",
+            tag=f"list-{list_id}",
+            exclude_member_id=auth["member_id"],
+        )
     # If request is AJAX, return JSON; otherwise redirect
     if request.headers.get("accept", "").startswith("application/json"):
         return JSONResponse({"ok": True, "added": added})
@@ -1273,6 +1282,14 @@ async def mark_chore_done(request: Request, chore_id: str):
     chore = db.get_chore(chore_id)
     if chore:
         db.log_activity(auth["family_id"], auth["display_name"], f"completed \"{chore['title']}\"", "chore_done")
+        push_module.send_to_family(
+            auth["family_id"],
+            title=f"{auth['display_name']} completed a chore",
+            body=chore['title'],
+            url="/chores",
+            tag=f"chore-{chore_id}",
+            exclude_member_id=auth["member_id"],
+        )
     streak = db.get_chore_streak(chore_id, today_str)
     return JSONResponse({"ok": True, "streak": streak})
 
@@ -1758,6 +1775,64 @@ Rules:
         })
 
     return JSONResponse({"action": "unknown", "text": text})
+
+
+# ── Push Notifications ──
+
+@app.get("/api/push/vapid-key", response_class=JSONResponse)
+async def get_vapid_key():
+    return JSONResponse({"key": os.getenv("VAPID_PUBLIC_KEY", "")})
+
+
+@app.post("/api/push/subscribe")
+async def push_subscribe(request: Request):
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    body = await request.json()
+    sub = body.get("subscription") or {}
+    endpoint = sub.get("endpoint")
+    keys = sub.get("keys") or {}
+    p256dh = keys.get("p256dh")
+    auth_key = keys.get("auth")
+    if not (endpoint and p256dh and auth_key):
+        return JSONResponse({"error": "invalid subscription"}, status_code=400)
+    db.save_push_subscription(
+        endpoint=endpoint,
+        device_id=auth["device_id"],
+        member_id=auth["member_id"],
+        family_id=auth["family_id"],
+        p256dh=p256dh,
+        auth=auth_key,
+        user_agent=request.headers.get("user-agent", ""),
+    )
+    return JSONResponse({"ok": True})
+
+
+@app.delete("/api/push/subscribe")
+async def push_unsubscribe(request: Request):
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    body = await request.json()
+    endpoint = body.get("endpoint")
+    if endpoint:
+        db.delete_push_subscription(endpoint)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/api/push/test")
+async def push_test(request: Request):
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    count = push_module.send_to_member(
+        auth["member_id"],
+        title="FamPilot",
+        body=f"Hello {auth['display_name']}! Notifications are working.",
+        url="/",
+    )
+    return JSONResponse({"ok": True, "sent": count})
 
 
 @app.post("/api/suggestion/accept")
