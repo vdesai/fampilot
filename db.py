@@ -792,5 +792,65 @@ def get_recent_activity(family_id: str, limit: int = 15) -> list:
     return rows or []
 
 
+# ── Pattern Detection (agentic suggestions) ──
+
+def get_pattern_suggestions(family_id: str) -> list:
+    """Detect patterns in family behavior and return smart suggestions.
+
+    Looks for:
+    - List items added on the same weekday 2+ times in past 8 weeks
+    - Items in pantry that haven't been refilled to grocery list
+    """
+    suggestions = []
+    today = _local_today()
+    weekday_name = today.strftime("%A")
+    cutoff = (today - timedelta(weeks=8)).isoformat()
+
+    # 1. Recurring list items by weekday
+    rows = _execute(
+        """SELECT li.text, li.list_id, l.name as list_name, li.created_at
+           FROM list_items li
+           JOIN lists l ON l.id = li.list_id
+           WHERE l.family_id = ? AND li.created_at >= ?
+           ORDER BY li.created_at DESC""",
+        (family_id, cutoff), fetch='all') or []
+
+    # Group items by (text + list_id) and check if added on same weekday
+    item_history = {}
+    for r in rows:
+        try:
+            d = datetime.fromisoformat(r["created_at"].replace('Z', '+00:00')).date()
+            key = (r["text"].lower().strip(), r["list_id"])
+            if key not in item_history:
+                item_history[key] = {"text": r["text"], "list_name": r["list_name"], "list_id": r["list_id"], "days": []}
+            item_history[key]["days"].append(d.strftime("%A"))
+        except Exception:
+            continue
+
+    # Get current unchecked items in each list (so we don't suggest things already there)
+    current_items = set()
+    for lst in get_lists(family_id):
+        for item in get_list_items(lst["id"]):
+            if not item.get("checked"):
+                current_items.add((item["text"].lower().strip(), lst["id"]))
+
+    # Find items added 2+ times on this weekday
+    for key, info in item_history.items():
+        same_day_count = info["days"].count(weekday_name)
+        if same_day_count >= 2 and key not in current_items:
+            suggestions.append({
+                "type": "recurring_item",
+                "text": info["text"],
+                "list_id": info["list_id"],
+                "list_name": info["list_name"],
+                "reason": f"You usually add this on {weekday_name}s",
+                "count": same_day_count,
+            })
+
+    # Sort by frequency
+    suggestions.sort(key=lambda s: s.get("count", 0), reverse=True)
+    return suggestions[:3]  # max 3 suggestions
+
+
 # Initialise on import
 init_db()

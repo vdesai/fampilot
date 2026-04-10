@@ -784,6 +784,24 @@
             <div style="font-size:14px; color:rgba(255,255,255,0.95); line-height:1.5; max-width:340px; margin:0 auto;">{{ smart_summary }}</div>
         </div>
 
+        <!-- Smart Suggestions (agentic) -->
+        {% if suggestions %}
+        <div class="card" style="border-radius:20px; overflow:hidden; margin-bottom:12px; background:linear-gradient(135deg, #fff8e7 0%, #fff3d6 100%); border:2px solid #ffd700;">
+            <div style="padding:16px 20px;">
+                <div style="font-size:11px; font-weight:700; color:#b8860b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">✨ Smart Suggestions</div>
+                {% for sug in suggestions %}
+                <div id="sug-{{ loop.index }}" style="display:flex; align-items:center; gap:10px; padding:10px 0; {% if not loop.last %}border-bottom:1px solid rgba(184,134,11,0.15);{% endif %}">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:14px; font-weight:600; color:#333;">Add <strong>{{ sug.text }}</strong> to {{ sug.list_name }}?</div>
+                        <div style="font-size:12px; color:#888; margin-top:2px;">{{ sug.reason }}</div>
+                    </div>
+                    <button onclick="acceptSuggestion('{{ sug.list_id }}', '{{ sug.text|replace("'", "\\'") }}', 'sug-{{ loop.index }}')" style="background:#b8860b; color:white; border:none; padding:8px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; width:auto; box-shadow:none; transform:none;">Add</button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Two main actions -->
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
             <!-- Voice -->
@@ -1099,6 +1117,30 @@
         window.addEventListener('appinstalled', () => {
             document.getElementById('installBanner')?.classList.add('install-hidden');
         });
+
+        // Accept smart suggestion
+        async function acceptSuggestion(listId, text, rowId) {
+            const row = document.getElementById(rowId);
+            if (row) {
+                row.style.transition = 'opacity 0.3s';
+                row.style.opacity = '0.5';
+            }
+            const form = new FormData();
+            form.append('list_id', listId);
+            form.append('text', text);
+            try {
+                const res = await fetch('/api/suggestion/accept', { method: 'POST', body: form });
+                const data = await res.json();
+                if (data.ok) {
+                    if (row) {
+                        row.innerHTML = '<div style="flex:1; font-size:14px; font-weight:600; color:#2e7d32;">✓ Added to ' + data.list_name + '</div>';
+                        row.style.opacity = '1';
+                    }
+                }
+            } catch (e) {
+                if (row) row.style.opacity = '1';
+            }
+        }
 
         // Update Talk button when mic is active
         const _origGvStart = window.gvToggle;

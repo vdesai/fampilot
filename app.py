@@ -540,6 +540,7 @@ async def home(request: Request):
         "usage":               db.get_usage_info(family_id),
         "recent_activity":     db.get_recent_activity(family_id, limit=10),
         "smart_summary":       smart_summary,
+        "suggestions":         db.get_pattern_suggestions(family_id),
     })
 
 
@@ -1757,6 +1758,22 @@ Rules:
         })
 
     return JSONResponse({"action": "unknown", "text": text})
+
+
+@app.post("/api/suggestion/accept")
+async def accept_suggestion(request: Request,
+                             list_id: str = Form(...),
+                             text: str = Form(...)):
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    lst = db.get_list(list_id)
+    if not lst or lst["family_id"] != auth["family_id"]:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    item_id = str(uuid4())
+    db.add_list_item(item_id, list_id, text, added_by=auth["display_name"])
+    db.log_activity(auth["family_id"], auth["display_name"], f"added {text} to {lst['name']}", "list_item_added")
+    return JSONResponse({"ok": True, "list_name": lst["name"]})
 
 
 # ── Admin stats (password-protected) ──
