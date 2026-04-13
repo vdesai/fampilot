@@ -479,6 +479,7 @@
                 <div class="list-title">
                     <span class="list-title-icon">{{ list.icon }}</span>{{ list.name }}
                 </div>
+                <button class="delete-btn" onclick="shareList()" id="shareBtn" style="color:#667eea;">Share</button>
                 <form action="/lists/{{ list.id }}/delete" method="post"
                       onsubmit="return confirm('Delete this list and all its items?')">
                     <button type="submit" class="delete-btn">Delete</button>
@@ -494,6 +495,10 @@
                     <label class="action-btn cam-btn" title="Scan items from photo">
                         📷
                         <input type="file" id="camInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+                    </label>
+                    <label class="action-btn cam-btn" title="Scan receipt" style="font-size:16px;">
+                        🧾
+                        <input type="file" id="receiptInput" accept="image/*" capture="environment" onchange="handleReceipt(this)" style="display:none;">
                     </label>
                 </div>
             </div>
@@ -779,6 +784,68 @@
                     wrap.style.opacity = '1';
                     wrap.style.transform = 'translateY(0)';
                 });
+            }
+        }
+
+        // ── Receipt Scanning ──
+        async function handleReceipt(input) {
+            const file = input.files[0];
+            if (!file) return;
+            input.value = '';
+
+            const overlay = document.createElement('div');
+            overlay.className = 'processing';
+            overlay.id = 'processingOverlay';
+            overlay.innerHTML = '<div class="processing-card"><div class="processing-spinner"></div><div class="processing-text">Reading receipt...</div></div>';
+            document.body.appendChild(overlay);
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                // Step 1: Extract items from receipt
+                const res = await fetch('/api/scan-receipt', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                if (data.ok && data.items && data.items.length > 0) {
+                    // Step 2: Match and check off items
+                    overlay.querySelector('.processing-text').textContent = 'Matching items...';
+                    const applyRes = await fetch('/api/apply-receipt', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `list_id=${listId}&items_json=${encodeURIComponent(JSON.stringify(data.items))}`,
+                    });
+                    const applyData = await applyRes.json();
+
+                    let msg = `Receipt: ${data.items.length} items found`;
+                    if (applyData.matched > 0) msg += `, ${applyData.matched} checked off`;
+                    if (data.total) msg += ` — $${data.total.toFixed(2)} total`;
+                    showFeedback(msg);
+                    setTimeout(() => { showFeedback(''); location.reload(); }, 3000);
+                } else {
+                    showFeedback('Could not read receipt. Try again.');
+                    setTimeout(() => showFeedback(''), 3000);
+                }
+            } catch (e) {
+                showFeedback('Failed to scan receipt.');
+                setTimeout(() => showFeedback(''), 3000);
+            }
+            document.getElementById('processingOverlay')?.remove();
+        }
+
+        // ── Share ──
+        async function shareList() {
+            const btn = document.getElementById('shareBtn');
+            const res = await fetch(`/lists/${listId}/share`, { method: 'POST' });
+            const data = await res.json();
+            if (data.ok) {
+                if (navigator.share) {
+                    navigator.share({ title: document.title, url: data.url });
+                } else if (navigator.clipboard) {
+                    await navigator.clipboard.writeText(data.url);
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => { btn.textContent = 'Share'; }, 2000);
+                }
             }
         }
 

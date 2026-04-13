@@ -32,6 +32,8 @@ from main import (
     classify_and_extract_multi_from_image,
     suggest_meals_from_pantry,
     suggest_meals_from_photo,
+    extract_receipt_items,
+    answer_family_question,
     authenticate_google_calendar,
     create_calendar_event,
     GOOGLE_CALENDAR_AVAILABLE,
@@ -520,6 +522,12 @@ async def home(request: Request):
             summary_parts.append(f"\"{pending_chores[0]['title']}\" still pending.")
         else:
             summary_parts.append(f"{len(pending_chores)} chores still pending.")
+
+    # Stale pantry items
+    stale_pantry = db.get_stale_pantry_items(family_id)
+    if stale_pantry:
+        stale_names = ", ".join(s["text"] for s in stale_pantry[:3])
+        summary_parts.append(f"Might be running low on: {stale_names}.")
 
     if not summary_parts:
         summary_parts.append("All clear — nothing scheduled.")
@@ -1301,6 +1309,33 @@ async def running_low(request: Request, list_id: str, item_id: str):
     })
 
 
+@app.post("/lists/{list_id}/share")
+async def share_list(request: Request, list_id: str):
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    lst = db.get_list(list_id)
+    if not lst or lst["family_id"] != auth["family_id"]:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    token = db.get_or_create_share_token(list_id)
+    share_url = f"{_base_url(request)}/shared/{token}"
+    return JSONResponse({"ok": True, "url": share_url, "token": token})
+
+
+@app.get("/shared/{token}", response_class=HTMLResponse)
+async def view_shared_list(request: Request, token: str):
+    lst = db.get_list_by_share_token(token)
+    if not lst:
+        return HTMLResponse("<h2>List not found</h2>", status_code=404)
+    items = db.get_list_items(lst["id"])
+    unchecked = [i for i in items if not i["checked"]]
+    checked = [i for i in items if i["checked"]]
+    return templates.TemplateResponse(request, "shared_list.html", {
+        "request": request, "list": lst,
+        "unchecked": unchecked, "checked": checked,
+    })
+
+
 @app.post("/lists/{list_id}/clear-checked")
 async def clear_checked(request: Request, list_id: str):
     db.clear_checked_items(list_id)
@@ -1663,6 +1698,113 @@ async def add_missing_to_list(request: Request,
             added += 1
 
     return JSONResponse({"ok": True, "count": added, "list_id": list_id})
+
+
+# ── Receipt scanning ──
+
+@app.post("/api/scan-receipt")
+async def scan_receipt(request: Request, file: UploadFile = File(...)):
+    """Extract items and prices from a receipt photo."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return JSONResponse({"error": "API key not configured"}, status_code=500)
+
+    upload_dir = Path("uploads")
+    upload_dir.mkdir(exist_ok=True)
+    ext = Path(file.filename or "receipt.jpg").suffix or ".jpg"
+    save_path = upload_dir / f"receipt_{uuid4().hex[:8]}{ext}"
+    content = await file.read()
+    save_path.write_bytes(content)
+
+    try:
+        result = extract_receipt_items(str(save_path), api_key)
+        return JSONResponse({"ok": True, **result})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    finally:
+        save_path.unlink(missing_ok=True)
+
+
+@app.post("/api/apply-receipt")
+async def apply_receipt(request: Request,
+                         list_id: str = Form(""),
+                         items_json: str = Form("[]")):
+    """Match receipt items to a list, check them off and set prices."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    family_id = auth["family_id"]
+    receipt_items = json.loads(items_json)
+
+    # If no list specified, find the most recent grocery-type list
+    if not list_id:
+        for l in db.get_lists(family_id):
+            if l["name"].lower() in ("groceries", "grocery list", "grocery", "meal plan groceries"):
+                list_id = l["id"]
+                break
+
+    matched = 0
+    unmatched = []
+    if list_id:
+        list_items = db.get_list_items(list_id)
+        unchecked = {i["text"].lower().strip(): i for i in list_items if not i["checked"]}
+
+        for ri in receipt_items:
+            name = ri.get("name", "").lower().strip()
+            price = ri.get("price", 0)
+            # Try to match by substring
+            found = None
+            for key, li in unchecked.items():
+                if name in key or key in name:
+                    found = li
+                    break
+            if found:
+                db.check_list_item(found["id"])
+                if price and price > 0:
+                    db.update_list_item_price(found["id"], price)
+                matched += 1
+                del unchecked[found["text"].lower().strip()]
+            else:
+                unmatched.append(ri)
+
+    return JSONResponse({
+        "ok": True,
+        "matched": matched,
+        "unmatched": unmatched,
+        "list_id": list_id,
+    })
+
+
+# ── Family Data Chat ──
+
+@app.get("/ask", response_class=HTMLResponse)
+async def ask_page(request: Request):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+    return templates.TemplateResponse(request, "ask.html", {
+        "request": request, "nav_page": "home", "auth": auth,
+    })
+
+
+@app.post("/api/ask")
+async def ask_family_data(request: Request, question: str = Form(...)):
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return JSONResponse({"error": "API key not configured"}, status_code=500)
+
+    family_data = db.get_family_data_summary(auth["family_id"])
+    try:
+        answer = answer_family_question(question, family_data, api_key)
+        return JSONResponse({"ok": True, "answer": answer})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 # ── Voice / AI agent routes ──

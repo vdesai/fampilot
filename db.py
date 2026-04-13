@@ -187,12 +187,13 @@ _SCHEMA = [
         family_id           TEXT
     )""",
     """CREATE TABLE IF NOT EXISTS lists (
-        id         TEXT PRIMARY KEY,
-        family_id  TEXT NOT NULL REFERENCES families(id),
-        name       TEXT NOT NULL,
-        icon       TEXT DEFAULT '🛒',
-        created_at TEXT NOT NULL,
-        archived   INTEGER DEFAULT 0
+        id          TEXT PRIMARY KEY,
+        family_id   TEXT NOT NULL REFERENCES families(id),
+        name        TEXT NOT NULL,
+        icon        TEXT DEFAULT '🛒',
+        created_at  TEXT NOT NULL,
+        archived    INTEGER DEFAULT 0,
+        share_token TEXT
     )""",
     """CREATE TABLE IF NOT EXISTS list_items (
         id          TEXT PRIMARY KEY,
@@ -266,7 +267,12 @@ def init_db() -> None:
         try:
             _execute(f"ALTER TABLE list_items ADD COLUMN {col} {definition}")
         except Exception:
-            pass  # column already exists
+            pass
+    # Lists table migrations
+    try:
+        _execute("ALTER TABLE lists ADD COLUMN share_token TEXT")
+    except Exception:
+        pass
 
 
 # ── Settings ──
@@ -636,6 +642,19 @@ def get_list(list_id: str) -> Optional[dict]:
     return _execute("SELECT * FROM lists WHERE id=?", (list_id,), fetch='one')
 
 
+def get_or_create_share_token(list_id: str) -> str:
+    row = _execute("SELECT share_token FROM lists WHERE id=?", (list_id,), fetch='one')
+    if row and row.get("share_token"):
+        return row["share_token"]
+    token = secrets.token_urlsafe(8)
+    _execute("UPDATE lists SET share_token=? WHERE id=?", (token, list_id))
+    return token
+
+
+def get_list_by_share_token(token: str) -> Optional[dict]:
+    return _execute("SELECT * FROM lists WHERE share_token=?", (token,), fetch='one')
+
+
 def delete_list(list_id: str) -> None:
     _execute("DELETE FROM list_items WHERE list_id=?", (list_id,))
     _execute("DELETE FROM lists WHERE id=?", (list_id,))
@@ -704,6 +723,19 @@ def get_pantry_items(family_id: str) -> list:
            WHERE l.family_id = ? AND li.checked = 0
              AND LOWER(l.name) IN ('pantry', 'inventory', 'home inventory')""",
         (family_id,), fetch='all') or []
+
+
+def get_stale_pantry_items(family_id: str, days: int = 14) -> list:
+    """Get pantry items added more than `days` ago — likely running low."""
+    cutoff = (_local_today() - timedelta(days=days)).isoformat()
+    return _execute(
+        """SELECT li.*, l.name as list_name, l.id as pantry_list_id FROM list_items li
+           JOIN lists l ON l.id = li.list_id
+           WHERE l.family_id = ? AND li.checked = 0
+             AND LOWER(l.name) IN ('pantry', 'inventory', 'home inventory')
+             AND li.created_at < ?
+           ORDER BY li.created_at ASC""",
+        (family_id, cutoff), fetch='all') or []
 
 
 def get_list_summary(family_id: str) -> list:
@@ -831,6 +863,67 @@ def get_usage_info(family_id: str) -> dict:
         "scans_limit": FREE_SCAN_LIMIT,
         "scans_remaining": max(0, FREE_SCAN_LIMIT - count) if not premium else 999,
         "can_scan": premium or count < FREE_SCAN_LIMIT,
+    }
+
+
+# ── Family Data Summary (for AI chat) ──
+
+def get_family_data_summary(family_id: str) -> dict:
+    """Build a complete data snapshot for AI to answer questions about."""
+    today = _local_today()
+
+    # Lists and items
+    lists_data = []
+    for lst in get_lists(family_id):
+        items = get_list_items(lst["id"])
+        unchecked = [dict(i) for i in items if not i["checked"]]
+        checked = [dict(i) for i in items if i["checked"]]
+        spending = get_list_spending(lst["id"])
+        lists_data.append({
+            "name": lst["name"], "icon": lst["icon"],
+            "unchecked": [{"text": i["text"], "qty": i.get("quantity", 1),
+                           "assigned_to": i.get("assigned_to"), "note": i.get("note")} for i in unchecked],
+            "checked": [{"text": i["text"], "price": i.get("price")} for i in checked],
+            "total_spent": spending,
+        })
+
+    # Chores
+    chores_data = []
+    for c in get_chores_with_status(family_id, today.isoformat()):
+        streak = get_chore_streak(c["id"], today.isoformat())
+        chores_data.append({
+            "title": c["title"], "assigned_to": c.get("assigned_to", "everyone"),
+            "recurrence": c.get("recurrence", "none"),
+            "done_today": bool(c.get("done_today")),
+            "done_by": c.get("done_by"), "streak": streak,
+        })
+
+    # Upcoming events
+    upcoming = get_upcoming_items(family_id)
+    events_data = [{"title": e["title"], "date": e["start_date"], "time": e.get("time"),
+                    "type": e["type"], "location": e.get("location")} for e in upcoming]
+
+    # Pantry
+    pantry = get_pantry_items(family_id)
+    stale = get_stale_pantry_items(family_id)
+
+    # Recent activity
+    activity = get_recent_activity(family_id, limit=20)
+    activity_data = [{"who": a["member_name"], "action": a["action"],
+                      "when": a["created_at"]} for a in activity]
+
+    # Meal plan
+    meal_plan = get_latest_meal_plan(family_id)
+
+    return {
+        "lists": lists_data,
+        "chores": chores_data,
+        "upcoming_events": events_data,
+        "pantry_items": [r["text"] for r in pantry],
+        "stale_pantry": [{"text": s["text"], "added": s["created_at"]} for s in stale],
+        "recent_activity": activity_data,
+        "has_meal_plan": meal_plan is not None,
+        "today": today.isoformat(),
     }
 
 

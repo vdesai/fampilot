@@ -535,6 +535,87 @@ Keep it practical and family-friendly."""
     return json.loads(cleaned)
 
 
+def extract_receipt_items(image_path: str, api_key: str) -> dict:
+    """
+    Extract items and prices from a receipt photo.
+
+    Returns:
+        {"store": str, "items": [{"name": str, "price": float, "quantity": int}], "total": float}
+    """
+    import base64
+    image_file = Path(image_path)
+    if not image_file.exists():
+        raise FileNotFoundError(f"Image file not found: {image_path}")
+
+    raw = image_file.read_bytes()
+    if len(raw) > MAX_IMAGE_BYTES:
+        raw, media_type = _compress_image(image_file)
+    else:
+        media_types = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+                       '.gif': 'image/gif', '.webp': 'image/webp'}
+        media_type = media_types.get(image_file.suffix.lower(), 'image/jpeg')
+
+    image_data = base64.standard_b64encode(raw).decode("utf-8")
+
+    prompt = """Look at this receipt photo. Extract every purchased item with its price.
+
+Return JSON:
+{
+  "store": "Store name if visible, otherwise null",
+  "items": [
+    {"name": "Item name (clean, short)", "price": 3.99, "quantity": 1}
+  ],
+  "total": 45.67
+}
+
+Rules:
+- Use simple item names (e.g. "Milk" not "ORGANIC WHOLE MILK 1GAL")
+- Price should be the line total (qty * unit price)
+- If quantity > 1, include it
+- Include tax as a separate item if visible
+- Total should match the receipt total if visible
+- If you can't read a price, use 0"""
+
+    client = Anthropic(api_key=api_key)
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=2000,
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
+                {"type": "text", "text": prompt}
+            ]
+        }]
+    )
+    cleaned = clean_json_response(message.content[0].text)
+    return json.loads(cleaned)
+
+
+def answer_family_question(question: str, family_data: dict, api_key: str) -> str:
+    """Answer a question about family data using AI."""
+    data_str = json.dumps(family_data, indent=2, default=str)
+
+    prompt = f"""You are a helpful family assistant. Answer the question based on the family's data below.
+
+FAMILY DATA:
+{data_str}
+
+Be concise and friendly. Use specific numbers and names from the data.
+If you don't have enough data to answer, say so honestly.
+Format currency as $X.XX when relevant.
+
+Question: {question}"""
+
+    client = Anthropic(api_key=api_key)
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=500,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return message.content[0].text
+
+
 def clean_json_response(response: str) -> str:
     """
     Clean Claude API response to extract valid JSON.
