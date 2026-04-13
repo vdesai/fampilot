@@ -769,75 +769,71 @@
             <button class="install-btn" onclick="installApp()">Install</button>
         </div>
 
-        <!-- Smart Briefing -->
-        <div style="text-align:center; padding:8px 0 16px;">
-            <div style="font-size:14px; color:#555; line-height:1.5; max-width:340px; margin:0 auto; font-weight:500;">{{ smart_summary }}</div>
+        <!-- Smart Briefing — card style -->
+        <div style="background:white; border-radius:14px; padding:12px 16px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05); text-align:center;">
+            <div style="font-size:14px; color:#555; line-height:1.4; font-weight:500;">{{ smart_summary }}</div>
         </div>
 
-        <!-- Two main actions — FIRST thing users see -->
+        <!-- Two main actions — compact -->
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-            <!-- Voice -->
-            <div id="talkBtn" onclick="gvToggle()" style="cursor:pointer; background:white; border-radius:16px; padding:24px 14px; text-align:center; box-shadow:0 2px 8px rgba(102,126,234,0.1); border:1.5px solid #e8eeff; transition:all 0.2s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);" class="action-btn">
-                <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="1" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            <div id="talkBtn" onclick="gvToggle()" style="cursor:pointer; background:white; border-radius:14px; padding:16px 14px; text-align:center; box-shadow:0 2px 8px rgba(102,126,234,0.1); border:1.5px solid #e8eeff; transition:all 0.2s;" class="action-btn">
+                <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="1" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                 </div>
-                <div id="talkLabel" style="font-size:15px; font-weight:700; color:#333;">Talk</div>
-                <div id="talkSub" style="font-size:11px; color:#999; margin-top:2px;">Say what you need</div>
+                <div id="talkLabel" style="font-size:14px; font-weight:700; color:#333;">Talk</div>
+                <div id="talkSub" style="font-size:11px; color:#999; margin-top:1px;">Say what you need</div>
             </div>
-            <!-- Scan -->
-            <div onclick="document.getElementById('fileInput').click();" style="cursor:pointer; background:white; border-radius:16px; padding:24px 14px; text-align:center; box-shadow:0 2px 8px rgba(102,126,234,0.1); border:1.5px solid #e8eeff; transition:transform 0.15s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);" class="action-btn">
-                <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <div onclick="document.getElementById('fileInput').click();" style="cursor:pointer; background:white; border-radius:14px; padding:16px 14px; text-align:center; box-shadow:0 2px 8px rgba(102,126,234,0.1); border:1.5px solid #e8eeff; transition:transform 0.15s;" class="action-btn">
+                <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 </div>
-                <div style="font-size:15px; font-weight:700; color:#333;">Scan</div>
-                <div style="font-size:11px; color:#999; margin-top:2px;">Photo or text</div>
+                <div style="font-size:14px; font-weight:700; color:#333;">Scan</div>
+                <div style="font-size:11px; color:#999; margin-top:1px;">Photo or text</div>
             </div>
         </div>
 
-        <!-- Try these — teaches users what to do -->
-        <div style="background:white; border-radius:16px; margin-bottom:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-            <div style="padding:14px 16px;">
-                <div style="font-size:11px; font-weight:700; color:#bbb; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Try saying</div>
-                <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                    <span onclick="gvExec('Add milk to groceries')" style="background:#f5f6ff; border:1px solid #dde1ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:all 0.15s;">"Add milk to groceries"</span>
-                    <span onclick="gvExec('Plan meals for the week')" style="background:#f5f6ff; border:1px solid #dde1ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:all 0.15s;">"Plan meals for the week"</span>
-                    <span onclick="gvExec('Create a chore for dishes')" style="background:#f5f6ff; border:1px solid #dde1ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:all 0.15s;">"Create a chore for dishes"</span>
-                    <span onclick="gvExec('I have rice, chicken, and tomatoes')" style="background:#f5f6ff; border:1px solid #dde1ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:all 0.15s;">"I have rice, chicken, and tomatoes"</span>
-                </div>
+        <!-- Try saying — horizontal scroll strip -->
+        <div style="margin-bottom:12px;">
+            <div style="font-size:10px; font-weight:700; color:#bbb; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; padding-left:2px;">Try saying</div>
+            <div style="display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px;">
+                <span onclick="gvExec('Add milk to groceries')" style="background:white; border:1px solid #dde1ff; border-radius:20px; padding:7px 14px; font-size:12px; color:#667eea; font-weight:500; cursor:pointer; white-space:nowrap; flex-shrink:0; box-shadow:0 1px 3px rgba(0,0,0,0.04);">"Add milk to groceries"</span>
+                <span onclick="gvExec('Plan meals for the week')" style="background:white; border:1px solid #dde1ff; border-radius:20px; padding:7px 14px; font-size:12px; color:#667eea; font-weight:500; cursor:pointer; white-space:nowrap; flex-shrink:0; box-shadow:0 1px 3px rgba(0,0,0,0.04);">"Plan meals for the week"</span>
+                <span onclick="gvExec('Create a chore for dishes')" style="background:white; border:1px solid #dde1ff; border-radius:20px; padding:7px 14px; font-size:12px; color:#667eea; font-weight:500; cursor:pointer; white-space:nowrap; flex-shrink:0; box-shadow:0 1px 3px rgba(0,0,0,0.04);">"Create a chore for dishes"</span>
+                <span onclick="gvExec('I have rice, chicken, and tomatoes')" style="background:white; border:1px solid #dde1ff; border-radius:20px; padding:7px 14px; font-size:12px; color:#667eea; font-weight:500; cursor:pointer; white-space:nowrap; flex-shrink:0; box-shadow:0 1px 3px rgba(0,0,0,0.04);">"I have rice, chicken, and tomatoes"</span>
             </div>
         </div>
 
         <!-- Smart Suggestions (agentic) -->
         {% if suggestions %}
-        <div class="card" style="border-radius:20px; overflow:hidden; margin-bottom:12px; background:linear-gradient(135deg, #fff8e7 0%, #fff3d6 100%); border:2px solid #ffd700;">
-            <div style="padding:16px 20px;">
-                <div style="font-size:11px; font-weight:700; color:#b8860b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Smart Suggestions</div>
+        <div class="card" style="border-radius:14px; overflow:hidden; margin-bottom:10px; background:linear-gradient(135deg, #fff8e7 0%, #fff3d6 100%); border:1.5px solid #ffd700;">
+            <div style="padding:12px 16px;">
+                <div style="font-size:10px; font-weight:700; color:#b8860b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Smart Suggestions</div>
                 {% for sug in suggestions %}
-                <div id="sug-{{ loop.index }}" style="display:flex; align-items:center; gap:10px; padding:10px 0; {% if not loop.last %}border-bottom:1px solid rgba(184,134,11,0.15);{% endif %}">
+                <div id="sug-{{ loop.index }}" style="display:flex; align-items:center; gap:10px; padding:8px 0; {% if not loop.last %}border-bottom:1px solid rgba(184,134,11,0.15);{% endif %}">
                     <div style="flex:1; min-width:0;">
-                        <div style="font-size:14px; font-weight:600; color:#333;">Add <strong>{{ sug.text }}</strong> to {{ sug.list_name }}?</div>
-                        <div style="font-size:12px; color:#888; margin-top:2px;">{{ sug.reason }}</div>
+                        <div style="font-size:13px; font-weight:600; color:#333;">Add <strong>{{ sug.text }}</strong> to {{ sug.list_name }}?</div>
+                        <div style="font-size:11px; color:#888; margin-top:1px;">{{ sug.reason }}</div>
                     </div>
-                    <button onclick="acceptSuggestion('{{ sug.list_id }}', '{{ sug.text|replace("'", "\\'") }}', 'sug-{{ loop.index }}')" style="background:#b8860b; color:white; border:none; padding:8px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; width:auto; box-shadow:none; transform:none;">Add</button>
+                    <button onclick="acceptSuggestion('{{ sug.list_id }}', '{{ sug.text|replace("'", "\\'") }}', 'sug-{{ loop.index }}')" style="background:#b8860b; color:white; border:none; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; width:auto; box-shadow:none; transform:none;">Add</button>
                 </div>
                 {% endfor %}
             </div>
         </div>
         {% endif %}
 
-        <!-- Feature links — explore more -->
+        <!-- Feature links — equal height grid -->
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
-            <a href="/whats-for-dinner" style="display:flex; flex-direction:column; align-items:center; gap:6px; background:linear-gradient(135deg, #ff9800 0%, #ff5722 100%); border-radius:16px; padding:18px 14px; text-decoration:none; box-shadow:0 3px 12px rgba(255,87,34,0.2); transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
-                <div style="font-size:14px; font-weight:700; color:white;">What's for Dinner?</div>
-                <div style="font-size:11px; color:rgba(255,255,255,0.8);">AI meals from your pantry</div>
+            <a href="/whats-for-dinner" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; background:linear-gradient(135deg, #ff9800 0%, #ff5722 100%); border-radius:14px; padding:16px 12px; text-decoration:none; box-shadow:0 3px 12px rgba(255,87,34,0.2); transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+                <div style="font-size:13px; font-weight:700; color:white;">What's for Dinner?</div>
+                <div style="font-size:10px; color:rgba(255,255,255,0.8);">AI meals from your pantry</div>
             </a>
-            <a href="/ask" style="display:flex; flex-direction:column; align-items:center; gap:6px; background:white; border-radius:16px; padding:18px 14px; text-decoration:none; box-shadow:0 1px 4px rgba(0,0,0,0.06); border:1.5px solid #e8eeff; transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <a href="/ask" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; background:white; border-radius:14px; padding:16px 12px; text-decoration:none; box-shadow:0 1px 4px rgba(0,0,0,0.06); border:1.5px solid #e8eeff; transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 </div>
-                <div style="font-size:14px; font-weight:700; color:#333;">Ask FamPilot</div>
-                <div style="font-size:11px; color:#999;">Chat with your data</div>
+                <div style="font-size:13px; font-weight:700; color:#333;">Ask FamPilot</div>
+                <div style="font-size:10px; color:#999;">Chat with your data</div>
             </a>
         </div>
 
