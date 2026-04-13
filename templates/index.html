@@ -771,7 +771,7 @@
 
         <!-- Smart Briefing -->
         <div style="text-align:center; padding:8px 0 16px;">
-            <div style="font-size:14px; color:#666; line-height:1.5; max-width:340px; margin:0 auto;">{{ smart_summary }}</div>
+            <div style="font-size:14px; color:#555; line-height:1.5; max-width:340px; margin:0 auto; font-weight:500;">{{ smart_summary }}</div>
         </div>
 
         <!-- Smart Suggestions (agentic) -->
@@ -793,27 +793,27 @@
         {% endif %}
 
         <!-- What's for dinner -->
-        <a href="/whats-for-dinner" style="display:flex; align-items:center; gap:14px; background:white; border-radius:16px; padding:16px 20px; margin-bottom:12px; text-decoration:none; box-shadow:0 1px 4px rgba(0,0,0,0.06); border:1.5px solid #ffe0b2; transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-            <div style="width:44px;height:44px;border-radius:12px;background:#fff3e0;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🍽️</div>
+        <a href="/whats-for-dinner" style="display:flex; align-items:center; gap:14px; background:linear-gradient(135deg, #ff9800 0%, #ff5722 100%); border-radius:16px; padding:18px 20px; margin-bottom:12px; text-decoration:none; box-shadow:0 4px 16px rgba(255,87,34,0.2); transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+            <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🍽️</div>
             <div>
-                <div style="font-size:15px; font-weight:700; color:#333;">What's for Dinner?</div>
-                <div style="font-size:12px; color:#999;">AI meals from your pantry or fridge photo</div>
+                <div style="font-size:16px; font-weight:700; color:white;">What's for Dinner?</div>
+                <div style="font-size:12px; color:rgba(255,255,255,0.85);">AI meals from your pantry or fridge photo</div>
             </div>
-            <div style="margin-left:auto;color:#ccc;font-size:18px;">›</div>
+            <div style="margin-left:auto;color:rgba(255,255,255,0.5);font-size:18px;">›</div>
         </a>
 
         <!-- Two main actions -->
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
             <!-- Voice -->
-            <div id="talkBtn" onclick="gvToggle()" style="cursor:pointer; background:white; border-radius:16px; padding:24px 14px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,0.06); transition:all 0.2s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);" class="action-btn">
-                <div style="width:48px;height:48px;border-radius:14px;background:#f0f2ff;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 10px;">🎙️</div>
-                <div id="talkLabel" style="font-size:15px; font-weight:700; color:#333;">Talk</div>
+            <div id="talkBtn" onclick="gvToggle()" style="cursor:pointer; background:white; border-radius:16px; padding:24px 14px; text-align:center; box-shadow:0 2px 8px rgba(102,126,234,0.1); border:1.5px solid #e8eeff; transition:all 0.2s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);" class="action-btn">
+                <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 10px;color:white;">🎙️</div>
+                <div id="talkLabel" style="font-size:15px; font-weight:700; color:#667eea;">Talk</div>
                 <div id="talkSub" style="font-size:11px; color:#999; margin-top:2px;">Say what you need</div>
             </div>
             <!-- Scan -->
-            <div onclick="document.getElementById('fileInput').click();" style="cursor:pointer; background:white; border-radius:16px; padding:24px 14px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,0.06); transition:transform 0.15s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);" class="action-btn">
-                <div style="width:48px;height:48px;border-radius:14px;background:#f0f2ff;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 10px;">📸</div>
-                <div style="font-size:15px; font-weight:700; color:#333;">Scan</div>
+            <div onclick="document.getElementById('fileInput').click();" style="cursor:pointer; background:white; border-radius:16px; padding:24px 14px; text-align:center; box-shadow:0 2px 8px rgba(102,126,234,0.1); border:1.5px solid #e8eeff; transition:transform 0.15s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);" class="action-btn">
+                <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 10px;color:white;">📸</div>
+                <div style="font-size:15px; font-weight:700; color:#667eea;">Scan</div>
                 <div style="font-size:11px; color:#999; margin-top:2px;">Photo or text</div>
             </div>
         </div>
@@ -823,10 +823,10 @@
             <div style="padding:14px 16px;">
                 <div style="font-size:11px; font-weight:700; color:#bbb; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Try saying</div>
                 <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                    <span onclick="gvExec('Add milk to groceries')" style="background:#f8f9fb; border:1px solid #e8e8e8; border-radius:20px; padding:8px 14px; font-size:13px; color:#555; cursor:pointer; transition:all 0.15s;">"Add milk to groceries"</span>
-                    <span onclick="gvExec('Plan meals for the week')" style="background:#f8f9fb; border:1px solid #e8e8e8; border-radius:20px; padding:8px 14px; font-size:13px; color:#555; cursor:pointer; transition:all 0.15s;">"Plan meals for the week"</span>
-                    <span onclick="gvExec('Create a chore for dishes')" style="background:#f8f9fb; border:1px solid #e8e8e8; border-radius:20px; padding:8px 14px; font-size:13px; color:#555; cursor:pointer; transition:all 0.15s;">"Create a chore for dishes"</span>
-                    <span onclick="gvExec('I have rice, chicken, and tomatoes')" style="background:#f8f9fb; border:1px solid #e8e8e8; border-radius:20px; padding:8px 14px; font-size:13px; color:#555; cursor:pointer; transition:all 0.15s;">"I have rice, chicken, and tomatoes"</span>
+                    <span onclick="gvExec('Add milk to groceries')" style="background:#f5f6ff; border:1px solid #dde1ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:all 0.15s;">"Add milk to groceries"</span>
+                    <span onclick="gvExec('Plan meals for the week')" style="background:#f5f6ff; border:1px solid #dde1ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:all 0.15s;">"Plan meals for the week"</span>
+                    <span onclick="gvExec('Create a chore for dishes')" style="background:#f5f6ff; border:1px solid #dde1ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:all 0.15s;">"Create a chore for dishes"</span>
+                    <span onclick="gvExec('I have rice, chicken, and tomatoes')" style="background:#f5f6ff; border:1px solid #dde1ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:all 0.15s;">"I have rice, chicken, and tomatoes"</span>
                 </div>
             </div>
         </div>
