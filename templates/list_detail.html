@@ -275,6 +275,45 @@
         }
         .item.checked .item-added-by { display: none; }
 
+        /* Quantity controls */
+        .qty-controls {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+        .qty-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 1.5px solid #e0e0e0;
+            background: #fafafa;
+            color: #888;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            padding: 0;
+            line-height: 1;
+        }
+        .qty-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+            background: #f0f2ff;
+        }
+        .qty-badge {
+            min-width: 28px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #667eea;
+            padding: 2px 4px;
+        }
+        .item.checked .qty-controls { display: none; }
+
         .item-delete {
             background: none;
             border: none;
@@ -364,13 +403,18 @@
 
         <div id="uncheckedList">
             {% for item in unchecked %}
-            <div class="item" id="item-{{ item.id }}" data-id="{{ item.id }}">
+            <div class="item" id="item-{{ item.id }}" data-id="{{ item.id }}" data-qty="{{ item.quantity or 1 }}">
                 <button class="checkbox" onclick="toggleCheck('{{ item.id }}', true)">✓</button>
                 <div class="item-text">
                     {{ item.text }}
                     {% if item.added_by %}
                     <span class="item-added-by">added by {{ item.added_by }}</span>
                     {% endif %}
+                </div>
+                <div class="qty-controls">
+                    <button class="qty-btn" onclick="changeQty('{{ item.id }}', -1)">−</button>
+                    <span class="qty-badge" id="qty-{{ item.id }}">{{ item.quantity or 1 }}</span>
+                    <button class="qty-btn" onclick="changeQty('{{ item.id }}', 1)">+</button>
                 </div>
                 <button class="item-delete" onclick="deleteItem('{{ item.id }}')" title="Remove">×</button>
             </div>
@@ -438,31 +482,7 @@
             });
             const data = await res.json();
             if (data.ok) {
-                // Hide empty state
-                const empty = document.getElementById('emptyState');
-                if (empty) empty.style.display = 'none';
-
-                // Add items to DOM
-                const list = document.getElementById('uncheckedList');
-                for (const item of data.added) {
-                    const div = document.createElement('div');
-                    div.className = 'item';
-                    div.id = `item-${item.id}`;
-                    div.dataset.id = item.id;
-                    div.innerHTML = `
-                        <button class="checkbox" onclick="toggleCheck('${item.id}', true)">✓</button>
-                        <div class="item-text">${escapeHtml(item.text)}</div>
-                        <button class="item-delete" onclick="deleteItem('${item.id}')" title="Remove">×</button>
-                    `;
-                    div.style.opacity = '0';
-                    div.style.transform = 'translateY(-8px)';
-                    list.appendChild(div);
-                    requestAnimationFrame(() => {
-                        div.style.transition = 'opacity 0.25s, transform 0.25s';
-                        div.style.opacity = '1';
-                        div.style.transform = 'translateY(0)';
-                    });
-                }
+                appendItems(data.added);
                 updateStatus();
             }
             addInput.focus();
@@ -505,6 +525,21 @@
             }, 300);
         }
 
+        async function changeQty(itemId, delta) {
+            const el = document.getElementById(`item-${itemId}`);
+            if (!el) return;
+            let qty = parseInt(el.dataset.qty || '1') + delta;
+            if (qty < 1) qty = 1;
+            el.dataset.qty = qty;
+            const badge = document.getElementById(`qty-${itemId}`);
+            if (badge) badge.textContent = qty;
+            await fetch(`/lists/${listId}/qty/${itemId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `qty=${qty}`,
+            });
+        }
+
         function updateStatus() {
             const unchecked = document.querySelectorAll('#uncheckedList .item').length;
             const checked = document.querySelectorAll('#checkedList .item').length;
@@ -524,6 +559,38 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function appendItems(items) {
+            const empty = document.getElementById('emptyState');
+            if (empty) empty.style.display = 'none';
+            const list = document.getElementById('uncheckedList');
+            for (const item of items) {
+                const qty = item.quantity || 1;
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.id = `item-${item.id}`;
+                div.dataset.id = item.id;
+                div.dataset.qty = qty;
+                div.innerHTML = `
+                    <button class="checkbox" onclick="toggleCheck('${item.id}', true)">✓</button>
+                    <div class="item-text">${escapeHtml(item.text)}</div>
+                    <div class="qty-controls">
+                        <button class="qty-btn" onclick="changeQty('${item.id}', -1)">−</button>
+                        <span class="qty-badge" id="qty-${item.id}">${qty}</span>
+                        <button class="qty-btn" onclick="changeQty('${item.id}', 1)">+</button>
+                    </div>
+                    <button class="item-delete" onclick="deleteItem('${item.id}')" title="Remove">×</button>
+                `;
+                div.style.opacity = '0';
+                div.style.transform = 'translateY(-8px)';
+                list.appendChild(div);
+                requestAnimationFrame(() => {
+                    div.style.transition = 'opacity 0.25s, transform 0.25s';
+                    div.style.opacity = '1';
+                    div.style.transform = 'translateY(0)';
+                });
+            }
         }
 
         // ── Voice Input (Web Speech API) ──
@@ -616,29 +683,7 @@
                 });
                 const addData = await addRes.json();
                 if (addData.ok) {
-                    const empty = document.getElementById('emptyState');
-                    if (empty) empty.style.display = 'none';
-
-                    const list = document.getElementById('uncheckedList');
-                    for (const item of addData.added) {
-                        const div = document.createElement('div');
-                        div.className = 'item';
-                        div.id = `item-${item.id}`;
-                        div.dataset.id = item.id;
-                        div.innerHTML = `
-                            <button class="checkbox" onclick="toggleCheck('${item.id}', true)">✓</button>
-                            <div class="item-text">${escapeHtml(item.text)}</div>
-                            <button class="item-delete" onclick="deleteItem('${item.id}')" title="Remove">×</button>
-                        `;
-                        div.style.opacity = '0';
-                        div.style.transform = 'translateY(-8px)';
-                        list.appendChild(div);
-                        requestAnimationFrame(() => {
-                            div.style.transition = 'opacity 0.25s, transform 0.25s';
-                            div.style.opacity = '1';
-                            div.style.transform = 'translateY(0)';
-                        });
-                    }
+                    appendItems(addData.added);
                     updateStatus();
                     showFeedback(`Added ${addData.added.length} item${addData.added.length === 1 ? '' : 's'}`);
                     setTimeout(() => showFeedback(''), 3000);
@@ -693,29 +738,7 @@
                     });
                     const addData = await addRes.json();
                     if (addData.ok) {
-                        const empty = document.getElementById('emptyState');
-                        if (empty) empty.style.display = 'none';
-
-                        const list = document.getElementById('uncheckedList');
-                        for (const item of addData.added) {
-                            const div = document.createElement('div');
-                            div.className = 'item';
-                            div.id = `item-${item.id}`;
-                            div.dataset.id = item.id;
-                            div.innerHTML = `
-                                <button class="checkbox" onclick="toggleCheck('${item.id}', true)">✓</button>
-                                <div class="item-text">${escapeHtml(item.text)}</div>
-                                <button class="item-delete" onclick="deleteItem('${item.id}')" title="Remove">×</button>
-                            `;
-                            div.style.opacity = '0';
-                            div.style.transform = 'translateY(-8px)';
-                            list.appendChild(div);
-                            requestAnimationFrame(() => {
-                                div.style.transition = 'opacity 0.25s, transform 0.25s';
-                                div.style.opacity = '1';
-                                div.style.transform = 'translateY(0)';
-                            });
-                        }
+                        appendItems(addData.added);
                         updateStatus();
                         showFeedback(`Scanned ${addData.added.length} item${addData.added.length === 1 ? '' : 's'} from photo`);
                         setTimeout(() => showFeedback(''), 4000);

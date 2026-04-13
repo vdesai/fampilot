@@ -201,7 +201,8 @@ _SCHEMA = [
         checked    INTEGER DEFAULT 0,
         added_by   TEXT,
         created_at TEXT NOT NULL,
-        sort_order INTEGER DEFAULT 0
+        sort_order INTEGER DEFAULT 0,
+        quantity   INTEGER DEFAULT 1
     )""",
     """CREATE TABLE IF NOT EXISTS chores (
         id          TEXT PRIMARY KEY,
@@ -252,6 +253,11 @@ _SCHEMA = [
 
 def init_db() -> None:
     _execute_many(_SCHEMA)
+    # Migrate: add quantity column if missing
+    try:
+        _execute("ALTER TABLE list_items ADD COLUMN quantity INTEGER DEFAULT 1")
+    except Exception:
+        pass  # column already exists
 
 
 # ── Settings ──
@@ -626,14 +632,18 @@ def delete_list(list_id: str) -> None:
     _execute("DELETE FROM lists WHERE id=?", (list_id,))
 
 
-def add_list_item(item_id: str, list_id: str, text: str, added_by: str = "") -> None:
+def add_list_item(item_id: str, list_id: str, text: str, added_by: str = "", quantity: int = 1) -> None:
     row = _execute(
         "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM list_items WHERE list_id=?",
         (list_id,), fetch='one')
     sort_order = row["next_order"] if row else 0
     _execute(
-        "INSERT INTO list_items (id, list_id, text, added_by, created_at, sort_order) VALUES (?,?,?,?,?,?)",
-        (item_id, list_id, text, added_by, datetime.now(timezone.utc).isoformat(), sort_order))
+        "INSERT INTO list_items (id, list_id, text, added_by, created_at, sort_order, quantity) VALUES (?,?,?,?,?,?,?)",
+        (item_id, list_id, text, added_by, datetime.now(timezone.utc).isoformat(), sort_order, max(1, quantity)))
+
+
+def update_list_item_quantity(item_id: str, quantity: int) -> None:
+    _execute("UPDATE list_items SET quantity=? WHERE id=?", (max(1, quantity), item_id))
 
 
 def get_list_items(list_id: str) -> list:

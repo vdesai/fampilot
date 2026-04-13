@@ -1172,14 +1172,26 @@ async def add_to_list(request: Request, list_id: str, text: str = Form(...)):
     if not lst or lst["family_id"] != auth["family_id"]:
         return JSONResponse({"error": "not found"}, status_code=404)
     # Support adding multiple items separated by newlines
+    # Parse optional quantity: "tomatoes x3", "tomatoes (3)", "3 tomatoes"
+    qty_pattern = re.compile(r'^(.+?)\s*[x×]\s*(\d+)$|^(.+?)\s*\((\d+)\)$|^(\d+)\s+(.+)$', re.IGNORECASE)
     added = []
     for line in text.strip().split("\n"):
         line = line.strip()
         if not line:
             continue
+        qty = 1
+        item_text = line
+        m = qty_pattern.match(line)
+        if m:
+            if m.group(1) and m.group(2):  # "tomatoes x3"
+                item_text, qty = m.group(1).strip(), int(m.group(2))
+            elif m.group(3) and m.group(4):  # "tomatoes (3)"
+                item_text, qty = m.group(3).strip(), int(m.group(4))
+            elif m.group(5) and m.group(6):  # "3 tomatoes"
+                item_text, qty = m.group(6).strip(), int(m.group(5))
         item_id = str(uuid4())
-        db.add_list_item(item_id, list_id, line, added_by=auth["display_name"])
-        added.append({"id": item_id, "text": line})
+        db.add_list_item(item_id, list_id, item_text, added_by=auth["display_name"], quantity=qty)
+        added.append({"id": item_id, "text": item_text, "quantity": qty})
     if added:
         items_text = ", ".join(a["text"] for a in added[:3])
         if len(added) > 3:
@@ -1215,6 +1227,12 @@ async def uncheck_item(list_id: str, item_id: str):
 async def delete_list_item_route(list_id: str, item_id: str):
     db.delete_list_item(item_id)
     return JSONResponse({"ok": True})
+
+
+@app.post("/lists/{list_id}/qty/{item_id}")
+async def update_quantity(list_id: str, item_id: str, qty: int = Form(...)):
+    db.update_list_item_quantity(item_id, qty)
+    return JSONResponse({"ok": True, "quantity": max(1, qty)})
 
 
 @app.post("/lists/{list_id}/clear-checked")
@@ -1588,10 +1606,12 @@ Return ONLY a JSON object with one of these actions:
    - Default to 7 days if not specified.
    - Include any dietary preferences mentioned (e.g. "vegetarian", "no dairy").
 
-6. Add to home inventory/pantry: {{"action": "add_to_inventory", "items": ["item1", "item2"]}}
+6. Add to home inventory/pantry: {{"action": "add_to_inventory", "items": [{{"name": "item1", "qty": 1}}, {{"name": "item2", "qty": 3}}]}}
    - Use this when someone says what they HAVE at home, not what they NEED to buy.
-   - "I have rice, chicken, and tomatoes" → inventory
-   - "We have 2 dozen eggs" → inventory
+   - Include quantities when mentioned. Default qty to 1 if not specified.
+   - "I have rice, chicken, and tomatoes" → items: [{{"name":"rice","qty":1}},{{"name":"chicken","qty":1}},{{"name":"tomatoes","qty":1}}]
+   - "We have 2 dozen eggs" → items: [{{"name":"eggs","qty":24}}]
+   - "I have tomatoes (3) dry beans (4)" → items: [{{"name":"tomatoes","qty":3}},{{"name":"dry beans","qty":4}}]
 
 7. Not sure: {{"action": "unknown", "text": "the original text"}}
 
@@ -1741,8 +1761,8 @@ Rules:
             })
 
     elif result.get("action") == "add_to_inventory":
-        items = result.get("items", [])
-        if items:
+        raw_items = result.get("items", [])
+        if raw_items:
             # Find or create a Pantry list
             pantry = None
             for l in lists:
@@ -1754,10 +1774,19 @@ Rules:
                 db.create_list(pantry_id, family_id, "Pantry", icon="🏠")
                 pantry = {"id": pantry_id, "name": "Pantry"}
             added = []
-            for item_text in items:
+            for item in raw_items:
+                # Support both old format (string) and new format (dict with name/qty)
+                if isinstance(item, dict):
+                    item_text = item.get("name", "")
+                    qty = int(item.get("qty", 1))
+                else:
+                    item_text = str(item)
+                    qty = 1
+                if not item_text:
+                    continue
                 item_id = str(uuid4())
-                db.add_list_item(item_id, pantry["id"], item_text, added_by=auth["display_name"])
-                added.append({"id": item_id, "text": item_text})
+                db.add_list_item(item_id, pantry["id"], item_text, added_by=auth["display_name"], quantity=qty)
+                added.append({"id": item_id, "text": item_text, "quantity": qty})
             items_text = ", ".join(a["text"] for a in added[:3])
             db.log_activity(family_id, auth["display_name"], f"added {items_text} to Pantry", "inventory_added")
             return JSONResponse({
