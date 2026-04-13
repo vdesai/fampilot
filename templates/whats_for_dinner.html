@@ -333,28 +333,46 @@
             return d.innerHTML;
         }
 
-        async function suggestFromPantry() {
+        async function suggestFromPantry(retries = 2) {
             const btn = document.getElementById('suggestBtn');
             btn.classList.add('loading');
             btn.disabled = true;
 
-            try {
-                const res = await fetch('/api/suggest-meals', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `preferences=${encodeURIComponent(Array.from(prefs).join(', '))}`,
-                });
-                const data = await res.json();
-                if (data.ok) {
-                    showResults(data);
-                } else {
-                    alert(data.error || 'Something went wrong');
+            for (let attempt = 0; attempt <= retries; attempt++) {
+                try {
+                    const res = await fetch('/api/suggest-meals', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `preferences=${encodeURIComponent(Array.from(prefs).join(', '))}`,
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        showResults(data);
+                        btn.classList.remove('loading');
+                        btn.disabled = false;
+                        return;
+                    }
+                    // Overloaded — retry
+                    if (data.error && data.error.includes('verloaded') && attempt < retries) {
+                        btn.querySelector('.btn-text').textContent = 'AI is busy, retrying...';
+                        btn.querySelector('.btn-text').style.display = '';
+                        btn.querySelector('.spinner').style.display = 'block';
+                        await new Promise(r => setTimeout(r, 3000));
+                        continue;
+                    }
+                    alert(data.error || 'Something went wrong. Please try again.');
+                    break;
+                } catch (e) {
+                    if (attempt < retries) {
+                        await new Promise(r => setTimeout(r, 3000));
+                        continue;
+                    }
+                    alert('Failed to get suggestions. Please try again.');
                 }
-            } catch (e) {
-                alert('Failed to get suggestions');
             }
             btn.classList.remove('loading');
             btn.disabled = false;
+            btn.querySelector('.btn-text').textContent = 'What can I make?';
         }
 
         async function handleFridgePhoto(input) {
@@ -386,11 +404,18 @@
                 const data = await res.json();
                 if (data.ok) {
                     showResults(data);
+                } else if (data.error && data.error.includes('verloaded')) {
+                    overlay.querySelector('.processing-text').textContent = 'AI is busy, retrying...';
+                    await new Promise(r => setTimeout(r, 3000));
+                    const res2 = await fetch('/api/suggest-meals-from-photo', { method: 'POST', body: formData });
+                    const data2 = await res2.json();
+                    if (data2.ok) { showResults(data2); }
+                    else { alert('AI is temporarily busy. Please try again in a moment.'); }
                 } else {
-                    alert(data.error || 'Something went wrong');
+                    alert(data.error || 'Something went wrong. Please try again.');
                 }
             } catch (e) {
-                alert('Failed to scan fridge');
+                alert('Failed to scan fridge. Please try again.');
             }
             document.getElementById('processingOverlay')?.remove();
         }

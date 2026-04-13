@@ -226,21 +226,28 @@
             sendBtn.disabled = true;
 
             try {
-                const res = await fetch('/api/ask', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `question=${encodeURIComponent(q)}`,
-                });
-                const data = await res.json();
+                let data;
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    const res = await fetch('/api/ask', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `question=${encodeURIComponent(q)}`,
+                    });
+                    data = await res.json();
+                    if (data.ok || !(data.error && data.error.includes('verloaded'))) break;
+                    await new Promise(r => setTimeout(r, 3000));
+                }
                 typing.remove();
                 if (data.ok) {
                     addMessage(data.answer, 'ai');
+                } else if (data.error && data.error.includes('verloaded')) {
+                    addMessage('AI is temporarily busy. Please try again in a moment.', 'ai');
                 } else {
                     addMessage(data.error || 'Something went wrong.', 'ai');
                 }
             } catch (e) {
                 typing.remove();
-                addMessage('Failed to get a response.', 'ai');
+                addMessage('Failed to get a response. Please try again.', 'ai');
             }
             sendBtn.disabled = false;
             chatInput.focus();
