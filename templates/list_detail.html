@@ -326,6 +326,114 @@
         }
         .item-delete:hover { color: #ff6b6b; }
 
+        /* Item extras row (note, assign, price, running low) */
+        .item-extras {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 16px 10px 56px;
+            margin-top: -4px;
+        }
+        .item-extras button, .item-extras .extra-tag {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            border: 1px solid #e8e8e8;
+            background: #fafafa;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .item-extras button:hover {
+            border-color: #667eea;
+            color: #667eea;
+            background: #f0f2ff;
+        }
+        .extra-tag.has-value {
+            background: #f0f2ff;
+            border-color: #c8d0f8;
+            color: #667eea;
+        }
+        .extra-tag.assigned {
+            background: #fff3e0;
+            border-color: #ffe0b2;
+            color: #e65100;
+        }
+        .running-low-btn {
+            background: #fff3e0 !important;
+            border-color: #ffcc80 !important;
+            color: #e65100 !important;
+        }
+        .running-low-btn:hover {
+            background: #ffe0b2 !important;
+        }
+        .running-low-btn.sent {
+            background: #e8f5e9 !important;
+            border-color: #a5d6a7 !important;
+            color: #2e7d32 !important;
+            cursor: default;
+        }
+
+        /* Note/assign/price popover */
+        .inline-edit {
+            display: none;
+            padding: 0 16px 10px 56px;
+        }
+        .inline-edit.active { display: flex; gap: 6px; }
+        .inline-edit input {
+            flex: 1;
+            padding: 8px 10px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+        .inline-edit input:focus { outline: none; border-color: #667eea; }
+        .inline-edit button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+        }
+        .inline-edit select {
+            flex: 1;
+            padding: 8px 10px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            background: white;
+        }
+        .inline-edit select:focus { outline: none; border-color: #667eea; }
+
+        /* Price input on checked items */
+        .price-badge {
+            font-size: 12px;
+            font-weight: 600;
+            color: #43a047;
+            flex-shrink: 0;
+            padding: 2px 6px;
+        }
+        .item.checked .item-extras { display: none; }
+
+        /* Spending bar */
+        .spending-bar {
+            background: #e8f5e9;
+            border-radius: 10px;
+            padding: 10px 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .spending-label { font-size: 13px; color: #555; font-weight: 500; }
+        .spending-amount { font-size: 16px; color: #2e7d32; font-weight: 700; }
+
         /* Empty state */
         .empty {
             text-align: center;
@@ -393,6 +501,13 @@
     </div>
 
     <div class="content">
+        {% if spending and spending > 0 %}
+        <div class="spending-bar" id="spendingBar">
+            <span class="spending-label">Total spent</span>
+            <span class="spending-amount" id="spendingAmount">${{ "%.2f"|format(spending) }}</span>
+        </div>
+        {% endif %}
+
         {% if not unchecked and not checked %}
         <div class="empty" id="emptyState">
             <div class="empty-icon">{{ list.icon }}</div>
@@ -401,22 +516,64 @@
         </div>
         {% endif %}
 
+        {% if suggestions %}
+        <div style="background:linear-gradient(135deg, #fff8e7 0%, #fff3d6 100%); border:1.5px solid #ffd700; border-radius:12px; padding:12px 16px; margin-bottom:12px;">
+            <div style="font-size:11px; font-weight:700; color:#b8860b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Suggested</div>
+            {% for sug in suggestions %}
+            <div id="sug-{{ loop.index }}" style="display:flex; align-items:center; gap:10px; padding:6px 0;">
+                <div style="flex:1; font-size:14px; color:#333;">{{ sug.text }} <span style="font-size:11px; color:#999;">— {{ sug.reason }}</span></div>
+                <button onclick="acceptSuggestion('{{ sug.text|replace("'", "\\'") }}', 'sug-{{ loop.index }}')" style="background:#b8860b; color:white; border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">+ Add</button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <div id="uncheckedList">
             {% for item in unchecked %}
-            <div class="item" id="item-{{ item.id }}" data-id="{{ item.id }}" data-qty="{{ item.quantity or 1 }}">
-                <button class="checkbox" onclick="toggleCheck('{{ item.id }}', true)">✓</button>
-                <div class="item-text">
-                    {{ item.text }}
-                    {% if item.added_by %}
-                    <span class="item-added-by">added by {{ item.added_by }}</span>
+            <div class="item-wrap" id="wrap-{{ item.id }}">
+                <div class="item" id="item-{{ item.id }}" data-id="{{ item.id }}" data-qty="{{ item.quantity or 1 }}">
+                    <button class="checkbox" onclick="toggleCheck('{{ item.id }}', true)">✓</button>
+                    <div class="item-text">
+                        {{ item.text }}
+                        {% if item.added_by %}
+                        <span class="item-added-by">added by {{ item.added_by }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="qty-controls">
+                        <button class="qty-btn" onclick="changeQty('{{ item.id }}', -1)">−</button>
+                        <span class="qty-badge" id="qty-{{ item.id }}">{{ item.quantity or 1 }}</span>
+                        <button class="qty-btn" onclick="changeQty('{{ item.id }}', 1)">+</button>
+                    </div>
+                    <button class="item-delete" onclick="deleteItem('{{ item.id }}')" title="Remove">×</button>
+                </div>
+                <div class="item-extras">
+                    {% if item.note %}
+                    <span class="extra-tag has-value" onclick="toggleEdit('{{ item.id }}', 'note')" title="{{ item.note }}">📝 {{ item.note[:20] }}{% if item.note|length > 20 %}...{% endif %}</span>
+                    {% else %}
+                    <button onclick="toggleEdit('{{ item.id }}', 'note')">📝 Note</button>
+                    {% endif %}
+                    {% if item.assigned_to %}
+                    <span class="extra-tag assigned" onclick="toggleEdit('{{ item.id }}', 'assign')">👤 {{ item.assigned_to }}</span>
+                    {% else %}
+                    <button onclick="toggleEdit('{{ item.id }}', 'assign')">👤 Assign</button>
+                    {% endif %}
+                    {% if is_pantry %}
+                    <button class="running-low-btn" id="low-{{ item.id }}" onclick="markRunningLow('{{ item.id }}')">📉 Running low</button>
                     {% endif %}
                 </div>
-                <div class="qty-controls">
-                    <button class="qty-btn" onclick="changeQty('{{ item.id }}', -1)">−</button>
-                    <span class="qty-badge" id="qty-{{ item.id }}">{{ item.quantity or 1 }}</span>
-                    <button class="qty-btn" onclick="changeQty('{{ item.id }}', 1)">+</button>
+                <div class="inline-edit" id="edit-note-{{ item.id }}">
+                    <input type="text" placeholder="Add a note..." value="{{ item.note or '' }}" id="note-input-{{ item.id }}">
+                    <button onclick="saveNote('{{ item.id }}')">Save</button>
                 </div>
-                <button class="item-delete" onclick="deleteItem('{{ item.id }}')" title="Remove">×</button>
+                <div class="inline-edit" id="edit-assign-{{ item.id }}">
+                    <select id="assign-input-{{ item.id }}">
+                        <option value="">Unassigned</option>
+                        {% for m in members %}
+                        <option value="{{ m.display_name }}" {% if item.assigned_to == m.display_name %}selected{% endif %}>{{ m.display_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button onclick="saveAssign('{{ item.id }}')">Save</button>
+                </div>
             </div>
             {% endfor %}
         </div>
@@ -430,10 +587,21 @@
         </div>
         <div id="checkedList">
             {% for item in checked %}
-            <div class="item checked" id="item-{{ item.id }}" data-id="{{ item.id }}">
-                <button class="checkbox" onclick="toggleCheck('{{ item.id }}', false)">✓</button>
-                <div class="item-text">{{ item.text }}</div>
-                <button class="item-delete" onclick="deleteItem('{{ item.id }}')" title="Remove">×</button>
+            <div class="item-wrap" id="wrap-{{ item.id }}">
+                <div class="item checked" id="item-{{ item.id }}" data-id="{{ item.id }}">
+                    <button class="checkbox" onclick="toggleCheck('{{ item.id }}', false)">✓</button>
+                    <div class="item-text">{{ item.text }}</div>
+                    {% if item.price %}
+                    <span class="price-badge">${{ "%.2f"|format(item.price) }}</span>
+                    {% else %}
+                    <button class="extra-tag" style="font-size:11px;border:1px solid #e0e0e0;padding:3px 8px;border-radius:12px;background:#fafafa;color:#888;cursor:pointer;" onclick="toggleEdit('{{ item.id }}', 'price')">+ $</button>
+                    {% endif %}
+                    <button class="item-delete" onclick="deleteItem('{{ item.id }}')" title="Remove">×</button>
+                </div>
+                <div class="inline-edit" id="edit-price-{{ item.id }}">
+                    <input type="number" step="0.01" min="0" placeholder="Price..." value="{{ item.price or '' }}" id="price-input-{{ item.id }}">
+                    <button onclick="savePrice('{{ item.id }}')">Save</button>
+                </div>
             </div>
             {% endfor %}
         </div>
@@ -489,38 +657,38 @@
         }
 
         async function toggleCheck(itemId, check) {
+            const wrap = document.getElementById(`wrap-${itemId}`) || document.getElementById(`item-${itemId}`).parentElement;
             const el = document.getElementById(`item-${itemId}`);
             if (!el) return;
 
             const action = check ? 'check' : 'uncheck';
             await fetch(`/lists/${listId}/${action}/${itemId}`, { method: 'POST' });
 
-            // Move between lists
             el.classList.add('removing');
             setTimeout(() => {
                 el.classList.remove('removing');
                 if (check) {
                     el.classList.add('checked');
                     el.querySelector('.checkbox').setAttribute('onclick', `toggleCheck('${itemId}', false)`);
-                    document.getElementById('checkedList').prepend(el);
-                    // Show checked header
+                    document.getElementById('checkedList').prepend(wrap);
                     document.getElementById('checkedHeader').style.display = '';
                 } else {
                     el.classList.remove('checked');
                     el.querySelector('.checkbox').setAttribute('onclick', `toggleCheck('${itemId}', true)`);
-                    document.getElementById('uncheckedList').appendChild(el);
+                    document.getElementById('uncheckedList').appendChild(wrap);
                 }
                 updateStatus();
             }, 300);
         }
 
         async function deleteItem(itemId) {
+            const wrap = document.getElementById(`wrap-${itemId}`) || document.getElementById(`item-${itemId}`).parentElement;
             const el = document.getElementById(`item-${itemId}`);
             if (!el) return;
             el.classList.add('removing');
             await fetch(`/lists/${listId}/delete-item/${itemId}`, { method: 'POST' });
             setTimeout(() => {
-                el.remove();
+                wrap.remove();
                 updateStatus();
             }, 300);
         }
@@ -561,35 +729,186 @@
             return div.innerHTML;
         }
 
+        const isPantry = {{ 'true' if is_pantry else 'false' }};
+        const memberNames = {{ members|map(attribute='display_name')|list|tojson }};
+
         function appendItems(items) {
             const empty = document.getElementById('emptyState');
             if (empty) empty.style.display = 'none';
             const list = document.getElementById('uncheckedList');
             for (const item of items) {
                 const qty = item.quantity || 1;
-                const div = document.createElement('div');
-                div.className = 'item';
-                div.id = `item-${item.id}`;
-                div.dataset.id = item.id;
-                div.dataset.qty = qty;
-                div.innerHTML = `
-                    <button class="checkbox" onclick="toggleCheck('${item.id}', true)">✓</button>
-                    <div class="item-text">${escapeHtml(item.text)}</div>
-                    <div class="qty-controls">
-                        <button class="qty-btn" onclick="changeQty('${item.id}', -1)">−</button>
-                        <span class="qty-badge" id="qty-${item.id}">${qty}</span>
-                        <button class="qty-btn" onclick="changeQty('${item.id}', 1)">+</button>
+                const wrap = document.createElement('div');
+                wrap.className = 'item-wrap';
+                wrap.id = `wrap-${item.id}`;
+                const lowBtn = isPantry ? `<button class="running-low-btn" id="low-${item.id}" onclick="markRunningLow('${item.id}')">📉 Running low</button>` : '';
+                wrap.innerHTML = `
+                    <div class="item" id="item-${item.id}" data-id="${item.id}" data-qty="${qty}">
+                        <button class="checkbox" onclick="toggleCheck('${item.id}', true)">✓</button>
+                        <div class="item-text">${escapeHtml(item.text)}</div>
+                        <div class="qty-controls">
+                            <button class="qty-btn" onclick="changeQty('${item.id}', -1)">−</button>
+                            <span class="qty-badge" id="qty-${item.id}">${qty}</span>
+                            <button class="qty-btn" onclick="changeQty('${item.id}', 1)">+</button>
+                        </div>
+                        <button class="item-delete" onclick="deleteItem('${item.id}')" title="Remove">×</button>
                     </div>
-                    <button class="item-delete" onclick="deleteItem('${item.id}')" title="Remove">×</button>
+                    <div class="item-extras">
+                        <button onclick="toggleEdit('${item.id}', 'note')">📝 Note</button>
+                        <button onclick="toggleEdit('${item.id}', 'assign')">👤 Assign</button>
+                        ${lowBtn}
+                    </div>
+                    <div class="inline-edit" id="edit-note-${item.id}">
+                        <input type="text" placeholder="Add a note..." id="note-input-${item.id}">
+                        <button onclick="saveNote('${item.id}')">Save</button>
+                    </div>
+                    <div class="inline-edit" id="edit-assign-${item.id}">
+                        <select id="assign-input-${item.id}">
+                            <option value="">Unassigned</option>
+                            ${memberNames.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}
+                        </select>
+                        <button onclick="saveAssign('${item.id}')">Save</button>
+                    </div>
                 `;
-                div.style.opacity = '0';
-                div.style.transform = 'translateY(-8px)';
-                list.appendChild(div);
+                wrap.style.opacity = '0';
+                wrap.style.transform = 'translateY(-8px)';
+                list.appendChild(wrap);
                 requestAnimationFrame(() => {
-                    div.style.transition = 'opacity 0.25s, transform 0.25s';
-                    div.style.opacity = '1';
-                    div.style.transform = 'translateY(0)';
+                    wrap.style.transition = 'opacity 0.25s, transform 0.25s';
+                    wrap.style.opacity = '1';
+                    wrap.style.transform = 'translateY(0)';
                 });
+            }
+        }
+
+        // ── Suggestions ──
+        async function acceptSuggestion(text, sugId) {
+            const el = document.getElementById(sugId);
+            const btn = el.querySelector('button');
+            btn.textContent = 'Adding...';
+            btn.disabled = true;
+            const res = await fetch(`/lists/${listId}/add`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+                body: `text=${encodeURIComponent(text)}`,
+            });
+            const data = await res.json();
+            if (data.ok) {
+                appendItems(data.added);
+                updateStatus();
+                el.style.display = 'none';
+            }
+        }
+
+        // ── Notes, Assignments, Prices, Running Low ──
+
+        function toggleEdit(itemId, type) {
+            const el = document.getElementById(`edit-${type}-${itemId}`);
+            if (!el) return;
+            el.classList.toggle('active');
+            const input = el.querySelector('input, select');
+            if (input && el.classList.contains('active')) input.focus();
+        }
+
+        async function saveNote(itemId) {
+            const input = document.getElementById(`note-input-${itemId}`);
+            const note = input.value.trim();
+            await fetch(`/lists/${listId}/note/${itemId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `note=${encodeURIComponent(note)}`,
+            });
+            document.getElementById(`edit-note-${itemId}`).classList.remove('active');
+            // Update the extras row
+            const wrap = document.getElementById(`wrap-${itemId}`);
+            if (wrap) {
+                const extras = wrap.querySelector('.item-extras');
+                const noteBtn = extras.querySelector('[onclick*="note"]');
+                if (noteBtn) {
+                    if (note) {
+                        noteBtn.outerHTML = `<span class="extra-tag has-value" onclick="toggleEdit('${itemId}', 'note')" title="${escapeHtml(note)}">📝 ${escapeHtml(note.substring(0, 20))}${note.length > 20 ? '...' : ''}</span>`;
+                    } else {
+                        noteBtn.outerHTML = `<button onclick="toggleEdit('${itemId}', 'note')">📝 Note</button>`;
+                    }
+                }
+            }
+        }
+
+        async function saveAssign(itemId) {
+            const input = document.getElementById(`assign-input-${itemId}`);
+            const assigned = input.value;
+            await fetch(`/lists/${listId}/assign/${itemId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `assigned_to=${encodeURIComponent(assigned)}`,
+            });
+            document.getElementById(`edit-assign-${itemId}`).classList.remove('active');
+            const wrap = document.getElementById(`wrap-${itemId}`);
+            if (wrap) {
+                const extras = wrap.querySelector('.item-extras');
+                const assignBtn = extras.querySelector('[onclick*="assign"]');
+                if (assignBtn) {
+                    if (assigned) {
+                        assignBtn.outerHTML = `<span class="extra-tag assigned" onclick="toggleEdit('${itemId}', 'assign')">👤 ${escapeHtml(assigned)}</span>`;
+                    } else {
+                        assignBtn.outerHTML = `<button onclick="toggleEdit('${itemId}', 'assign')">👤 Assign</button>`;
+                    }
+                }
+            }
+        }
+
+        async function savePrice(itemId) {
+            const input = document.getElementById(`price-input-${itemId}`);
+            const price = parseFloat(input.value) || 0;
+            await fetch(`/lists/${listId}/price/${itemId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `price=${price}`,
+            });
+            document.getElementById(`edit-price-${itemId}`).classList.remove('active');
+            // Update price badge
+            const el = document.getElementById(`item-${itemId}`);
+            if (el && price > 0) {
+                const existing = el.querySelector('.price-badge, .extra-tag');
+                if (existing) {
+                    existing.outerHTML = `<span class="price-badge">$${price.toFixed(2)}</span>`;
+                }
+            }
+            // Update spending total
+            updateSpending();
+        }
+
+        async function updateSpending() {
+            // Recalculate from visible price badges
+            let total = 0;
+            document.querySelectorAll('#checkedList .price-badge').forEach(el => {
+                const val = parseFloat(el.textContent.replace('$', ''));
+                if (!isNaN(val)) total += val;
+            });
+            let bar = document.getElementById('spendingBar');
+            if (total > 0) {
+                if (!bar) {
+                    bar = document.createElement('div');
+                    bar.className = 'spending-bar';
+                    bar.id = 'spendingBar';
+                    bar.innerHTML = '<span class="spending-label">Total spent</span><span class="spending-amount" id="spendingAmount"></span>';
+                    document.querySelector('.content').prepend(bar);
+                }
+                document.getElementById('spendingAmount').textContent = `$${total.toFixed(2)}`;
+            }
+        }
+
+        async function markRunningLow(itemId) {
+            const btn = document.getElementById(`low-${itemId}`);
+            if (!btn || btn.classList.contains('sent')) return;
+            btn.textContent = 'Adding...';
+            const res = await fetch(`/lists/${listId}/running-low/${itemId}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.ok) {
+                btn.textContent = `Added to ${data.grocery_list_name}`;
+                btn.classList.add('sent');
+            } else {
+                btn.textContent = '📉 Running low';
             }
         }
 

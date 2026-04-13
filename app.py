@@ -1153,11 +1153,20 @@ async def view_list(request: Request, list_id: str):
     items = db.get_list_items(list_id)
     unchecked = [i for i in items if not i["checked"]]
     checked = [i for i in items if i["checked"]]
+    spending = db.get_list_spending(list_id)
+    members = db.get_family_members(auth["family_id"])
+    is_pantry = lst["name"].lower() in ("pantry", "inventory", "home inventory")
+    all_suggestions = db.get_pattern_suggestions(auth["family_id"])
+    suggestions = [s for s in all_suggestions if s.get("list_id") == list_id]
     return templates.TemplateResponse(request, "list_detail.html", {
         "request": request,
         "list": lst,
         "unchecked": unchecked,
         "checked": checked,
+        "spending": spending,
+        "members": members,
+        "is_pantry": is_pantry,
+        "suggestions": suggestions,
         "nav_page": "lists",
         "auth": auth,
     })
@@ -1233,6 +1242,61 @@ async def delete_list_item_route(list_id: str, item_id: str):
 async def update_quantity(list_id: str, item_id: str, qty: int = Form(...)):
     db.update_list_item_quantity(item_id, qty)
     return JSONResponse({"ok": True, "quantity": max(1, qty)})
+
+
+@app.post("/lists/{list_id}/note/{item_id}")
+async def update_note(list_id: str, item_id: str, note: str = Form("")):
+    db.update_list_item_note(item_id, note)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/lists/{list_id}/assign/{item_id}")
+async def assign_item(list_id: str, item_id: str, assigned_to: str = Form("")):
+    db.update_list_item_assigned(item_id, assigned_to)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/lists/{list_id}/price/{item_id}")
+async def set_price(list_id: str, item_id: str, price: float = Form(0)):
+    db.update_list_item_price(item_id, price)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/lists/{list_id}/running-low/{item_id}")
+async def running_low(request: Request, list_id: str, item_id: str):
+    """Move a pantry item to the grocery list."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    family_id = auth["family_id"]
+    # Get the pantry item
+    item = None
+    for li in db.get_list_items(list_id):
+        if li["id"] == item_id:
+            item = li
+            break
+    if not item:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    # Find or create a Groceries list
+    grocery_list = None
+    for l in db.get_lists(family_id):
+        if l["name"].lower() in ("groceries", "grocery list", "grocery"):
+            grocery_list = l
+            break
+    if not grocery_list:
+        grocery_id = str(uuid4())
+        db.create_list(grocery_id, family_id, "Groceries", icon="🛒")
+        grocery_list = {"id": grocery_id, "name": "Groceries"}
+    # Add to grocery list
+    new_id = str(uuid4())
+    db.add_list_item(new_id, grocery_list["id"], item["text"], added_by=auth["display_name"])
+    db.log_activity(family_id, auth["display_name"], f"marked {item['text']} as running low", "running_low")
+    return JSONResponse({
+        "ok": True,
+        "grocery_list_id": grocery_list["id"],
+        "grocery_list_name": grocery_list["name"],
+        "item_text": item["text"],
+    })
 
 
 @app.post("/lists/{list_id}/clear-checked")
@@ -1446,6 +1510,10 @@ async def meals_add_to_list(request: Request,
     family_id = auth["family_id"]
     items = json.loads(items_json)
 
+    # Smart deduction: skip items already in pantry
+    pantry_items = {r["text"].lower().strip() for r in db.get_pantry_items(family_id)}
+    skipped = []
+
     # Create a new list if none selected
     if not list_id:
         list_id = str(uuid4())
@@ -1459,6 +1527,9 @@ async def meals_add_to_list(request: Request,
     for item_text in items:
         if not item_text.strip():
             continue
+        if item_text.strip().lower() in pantry_items:
+            skipped.append(item_text.strip())
+            continue
         item_id = str(uuid4())
         db.add_list_item(item_id, list_id, item_text.strip(), added_by="Meal Planner")
         added.append(item_text.strip())
@@ -1468,6 +1539,8 @@ async def meals_add_to_list(request: Request,
         "list_id": list_id,
         "list_name": lst["name"] if lst else "Meal Plan Groceries",
         "count": len(added),
+        "skipped": skipped,
+        "skipped_count": len(skipped),
     })
 
 

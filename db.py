@@ -195,14 +195,17 @@ _SCHEMA = [
         archived   INTEGER DEFAULT 0
     )""",
     """CREATE TABLE IF NOT EXISTS list_items (
-        id         TEXT PRIMARY KEY,
-        list_id    TEXT NOT NULL REFERENCES lists(id),
-        text       TEXT NOT NULL,
-        checked    INTEGER DEFAULT 0,
-        added_by   TEXT,
-        created_at TEXT NOT NULL,
-        sort_order INTEGER DEFAULT 0,
-        quantity   INTEGER DEFAULT 1
+        id          TEXT PRIMARY KEY,
+        list_id     TEXT NOT NULL REFERENCES lists(id),
+        text        TEXT NOT NULL,
+        checked     INTEGER DEFAULT 0,
+        added_by    TEXT,
+        created_at  TEXT NOT NULL,
+        sort_order  INTEGER DEFAULT 0,
+        quantity    INTEGER DEFAULT 1,
+        note        TEXT,
+        assigned_to TEXT,
+        price       REAL
     )""",
     """CREATE TABLE IF NOT EXISTS chores (
         id          TEXT PRIMARY KEY,
@@ -253,11 +256,17 @@ _SCHEMA = [
 
 def init_db() -> None:
     _execute_many(_SCHEMA)
-    # Migrate: add quantity column if missing
-    try:
-        _execute("ALTER TABLE list_items ADD COLUMN quantity INTEGER DEFAULT 1")
-    except Exception:
-        pass  # column already exists
+    # Migrate: add new columns if missing
+    for col, definition in [
+        ("quantity", "INTEGER DEFAULT 1"),
+        ("note", "TEXT"),
+        ("assigned_to", "TEXT"),
+        ("price", "REAL"),
+    ]:
+        try:
+            _execute(f"ALTER TABLE list_items ADD COLUMN {col} {definition}")
+        except Exception:
+            pass  # column already exists
 
 
 # ── Settings ──
@@ -646,6 +655,25 @@ def update_list_item_quantity(item_id: str, quantity: int) -> None:
     _execute("UPDATE list_items SET quantity=? WHERE id=?", (max(1, quantity), item_id))
 
 
+def update_list_item_note(item_id: str, note: str) -> None:
+    _execute("UPDATE list_items SET note=? WHERE id=?", (note.strip() or None, item_id))
+
+
+def update_list_item_assigned(item_id: str, assigned_to: str) -> None:
+    _execute("UPDATE list_items SET assigned_to=? WHERE id=?", (assigned_to.strip() or None, item_id))
+
+
+def update_list_item_price(item_id: str, price: float) -> None:
+    _execute("UPDATE list_items SET price=? WHERE id=?", (price if price and price > 0 else None, item_id))
+
+
+def get_list_spending(list_id: str) -> float:
+    row = _execute(
+        "SELECT COALESCE(SUM(price), 0) AS total FROM list_items WHERE list_id=? AND checked=1 AND price IS NOT NULL",
+        (list_id,), fetch='one')
+    return row["total"] if row else 0.0
+
+
 def get_list_items(list_id: str) -> list:
     return _execute(
         "SELECT * FROM list_items WHERE list_id=? ORDER BY checked ASC, sort_order ASC",
@@ -666,6 +694,16 @@ def delete_list_item(item_id: str) -> None:
 
 def clear_checked_items(list_id: str) -> None:
     _execute("DELETE FROM list_items WHERE list_id=? AND checked=1", (list_id,))
+
+
+def get_pantry_items(family_id: str) -> list:
+    """Get unchecked items from Pantry/Inventory lists for smart deduction."""
+    return _execute(
+        """SELECT li.text FROM list_items li
+           JOIN lists l ON l.id = li.list_id
+           WHERE l.family_id = ? AND li.checked = 0
+             AND LOWER(l.name) IN ('pantry', 'inventory', 'home inventory')""",
+        (family_id,), fetch='all') or []
 
 
 def get_list_summary(family_id: str) -> list:

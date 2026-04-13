@@ -409,11 +409,15 @@
             const data = await res.json();
 
             if (data.ok) {
-                btn.textContent = `Added ${data.count} items!`;
+                let msg = `Added ${data.count} items!`;
+                if (data.skipped_count > 0) {
+                    msg += ` (${data.skipped_count} already in pantry)`;
+                }
+                btn.textContent = msg;
                 btn.style.background = '#43a047';
                 setTimeout(() => {
                     window.location.href = `/lists/${data.list_id}`;
-                }, 1000);
+                }, 1500);
             } else {
                 btn.textContent = 'Failed — try again';
                 btn.disabled = false;
