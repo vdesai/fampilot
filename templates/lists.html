@@ -11,7 +11,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f5f5f7;
             min-height: 100vh;
         }
         .page-content {
@@ -28,7 +28,7 @@
         .page-title {
             font-size: 24px;
             font-weight: 700;
-            color: white;
+            color: #333;
         }
 
         /* New list form */
@@ -44,12 +44,14 @@
             border-radius: 12px;
             font-size: 16px;
             font-family: inherit;
-            background: rgba(255,255,255,0.95);
+            background: white;
+            border: 2px solid #e8e8e8;
             color: #333;
         }
         .new-list-input:focus {
             outline: none;
-            box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
         }
         .new-list-input::placeholder { color: #aaa; }
         .new-list-btn {
@@ -58,8 +60,8 @@
             border-radius: 12px;
             font-size: 16px;
             font-weight: 700;
-            background: white;
-            color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             cursor: pointer;
             white-space: nowrap;
             transition: transform 0.15s;
@@ -119,12 +121,12 @@
         .empty-title {
             font-size: 20px;
             font-weight: 700;
-            color: white;
+            color: #333;
             margin-bottom: 8px;
         }
         .empty-sub {
             font-size: 14px;
-            color: rgba(255,255,255,0.7);
+            color: #888;
         }
 
         /* Preset buttons */
@@ -136,19 +138,20 @@
         }
         .preset-btn {
             padding: 8px 14px;
-            border: 1.5px solid rgba(255,255,255,0.3);
+            border: 1.5px solid #e8e8e8;
             border-radius: 20px;
-            background: rgba(255,255,255,0.1);
-            color: rgba(255,255,255,0.9);
+            background: #fafafa;
+            color: #666;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.15s;
+            transition: all 0.15s;
             text-decoration: none;
         }
         .preset-btn:hover {
-            background: rgba(255,255,255,0.2);
-            border-color: rgba(255,255,255,0.5);
+            border-color: #667eea;
+            background: #f0f2ff;
+            color: #667eea;
         }
     </style>
 </head>

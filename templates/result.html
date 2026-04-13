@@ -9,7 +9,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f5f5f7;
             min-height: 100vh;
             padding: 0 20px 40px;
         }
@@ -17,8 +17,8 @@
         .container { max-width: 700px; margin: 0 auto; padding-top: 12px; }
 
         .header { text-align: center; margin-bottom: 30px; }
-        .header h1 { font-size: 28px; color: white; margin-bottom: 8px; font-weight: 600; }
-        .header p  { color: rgba(255,255,255,0.9); font-size: 16px; }
+        .header h1 { font-size: 28px; color: #333; margin-bottom: 8px; font-weight: 600; }
+        .header p  { color: #888; font-size: 16px; }
 
         /* ── Type badge row ── */
         .type-badge-row {
@@ -43,7 +43,7 @@
         .type-badge.task     { background: #fff3e0; color: #e65100; }
         .type-badge.reminder { background: #e3f2fd; color: #1565c0; }
 
-        .confidence { font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 500; }
+        .confidence { font-size: 13px; color: #888; font-weight: 500; }
 
         /* ── Low-confidence banner ── */
         .review-banner {
@@ -94,15 +94,16 @@
 
         /* ── Reasoning box ── */
         .reasoning-box {
-            background: rgba(255,255,255,0.15);
+            background: white;
             border-radius: 10px;
             padding: 12px 16px;
             margin-bottom: 20px;
-            color: rgba(255,255,255,0.95);
+            color: #555;
             font-size: 14px;
             line-height: 1.5;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
         }
-        .reasoning-box strong { display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.75; }
+        .reasoning-box strong { display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; }
 
         /* ── Messages ── */
         .message {
@@ -264,14 +265,14 @@
             gap: 6px;
             transition: all 0.2s;
         }
-        .manage-edit  { background: rgba(255,255,255,0.9); color: #667eea; }
-        .manage-edit:hover  { background: white; }
-        .manage-delete { background: rgba(220,53,69,0.15); color: #ff6b7a; border: 1.5px solid rgba(255,107,122,0.4); }
-        .manage-delete:hover { background: rgba(220,53,69,0.25); }
-        .manage-done   { background: rgba(40,167,69,0.15); color: #28a745; border: 1.5px solid rgba(40,167,69,0.35); }
-        .manage-done:hover   { background: rgba(40,167,69,0.28); }
-        .manage-undone { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.65); border: 1.5px solid rgba(255,255,255,0.2); }
-        .manage-undone:hover { background: rgba(255,255,255,0.22); }
+        .manage-edit  { background: #f0f2ff; color: #667eea; }
+        .manage-edit:hover  { background: #e0e4ff; }
+        .manage-delete { background: #ffebee; color: #c62828; border: 1.5px solid rgba(198,40,40,0.3); }
+        .manage-delete:hover { background: #ffcdd2; }
+        .manage-done   { background: #e8f5e9; color: #28a745; border: 1.5px solid rgba(40,167,69,0.35); }
+        .manage-done:hover   { background: #c8e6c9; }
+        .manage-undone { background: #f5f5f5; color: #888; border: 1.5px solid #e0e0e0; }
+        .manage-undone:hover { background: #eeeeee; }
 
         .completed-badge {
             display: inline-flex; align-items: center; gap: 5px;
@@ -285,17 +286,15 @@
 
         /* ── Footer links ── */
         .back-link { text-align:center; margin-top:12px; }
-        .back-link a { color:white; text-decoration:none; font-weight:500; font-size:14px; opacity:0.9; }
-        .back-link a:hover { opacity:1; text-decoration:underline; }
+        .back-link a { color:#667eea; text-decoration:none; font-weight:500; font-size:14px; }
+        .back-link a:hover { text-decoration:underline; }
 
         @media(max-width:600px) {
             .button-group, .button-group.edit-buttons { grid-template-columns:1fr; }
             .type-picker { grid-template-columns:1fr 1fr 1fr; }
             .card-header, .card-body, .actions { padding:18px; }
         }
-        .top-nav-wrap {
-            background: transparent !important;
-        }
+        /* nav inherits default styling */
     </style>
 </head>
 <body>
