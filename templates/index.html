@@ -774,50 +774,8 @@
             <div style="font-size:14px; color:#555; line-height:1.5; max-width:340px; margin:0 auto; font-weight:500;">{{ smart_summary }}</div>
         </div>
 
-        <!-- Smart Suggestions (agentic) -->
-        {% if suggestions %}
-        <div class="card" style="border-radius:20px; overflow:hidden; margin-bottom:12px; background:linear-gradient(135deg, #fff8e7 0%, #fff3d6 100%); border:2px solid #ffd700;">
-            <div style="padding:16px 20px;">
-                <div style="font-size:11px; font-weight:700; color:#b8860b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">✨ Smart Suggestions</div>
-                {% for sug in suggestions %}
-                <div id="sug-{{ loop.index }}" style="display:flex; align-items:center; gap:10px; padding:10px 0; {% if not loop.last %}border-bottom:1px solid rgba(184,134,11,0.15);{% endif %}">
-                    <div style="flex:1; min-width:0;">
-                        <div style="font-size:14px; font-weight:600; color:#333;">Add <strong>{{ sug.text }}</strong> to {{ sug.list_name }}?</div>
-                        <div style="font-size:12px; color:#888; margin-top:2px;">{{ sug.reason }}</div>
-                    </div>
-                    <button onclick="acceptSuggestion('{{ sug.list_id }}', '{{ sug.text|replace("'", "\\'") }}', 'sug-{{ loop.index }}')" style="background:#b8860b; color:white; border:none; padding:8px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; width:auto; box-shadow:none; transform:none;">Add</button>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Ask FamPilot -->
-        <a href="/ask" style="display:flex; align-items:center; gap:14px; background:white; border-radius:16px; padding:14px 20px; margin-bottom:10px; text-decoration:none; box-shadow:0 1px 4px rgba(0,0,0,0.06); border:1.5px solid #e8eeff; transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
-            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            </div>
-            <div>
-                <div style="font-size:14px; font-weight:700; color:#333;">Ask FamPilot</div>
-                <div style="font-size:11px; color:#999;">What did we spend? What's in the pantry?</div>
-            </div>
-            <div style="margin-left:auto;color:#ccc;font-size:16px;">›</div>
-        </a>
-
-        <!-- What's for dinner -->
-        <a href="/whats-for-dinner" style="display:flex; align-items:center; gap:14px; background:linear-gradient(135deg, #ff9800 0%, #ff5722 100%); border-radius:16px; padding:18px 20px; margin-bottom:12px; text-decoration:none; box-shadow:0 4px 16px rgba(255,87,34,0.2); transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-            <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
-            </div>
-            <div>
-                <div style="font-size:16px; font-weight:700; color:white;">What's for Dinner?</div>
-                <div style="font-size:12px; color:rgba(255,255,255,0.85);">AI meals from your pantry or fridge photo</div>
-            </div>
-            <div style="margin-left:auto;color:rgba(255,255,255,0.5);font-size:18px;">›</div>
-        </a>
-
-        <!-- Two main actions -->
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
+        <!-- Two main actions — FIRST thing users see -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
             <!-- Voice -->
             <div id="talkBtn" onclick="gvToggle()" style="cursor:pointer; background:white; border-radius:16px; padding:24px 14px; text-align:center; box-shadow:0 2px 8px rgba(102,126,234,0.1); border:1.5px solid #e8eeff; transition:all 0.2s; -webkit-tap-highlight-color:rgba(102,126,234,0.2);" class="action-btn">
                 <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">
@@ -836,7 +794,7 @@
             </div>
         </div>
 
-        <!-- Try these (tappable examples) -->
+        <!-- Try these — teaches users what to do -->
         <div style="background:white; border-radius:16px; margin-bottom:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.06);">
             <div style="padding:14px 16px;">
                 <div style="font-size:11px; font-weight:700; color:#bbb; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Try saying</div>
@@ -847,6 +805,40 @@
                     <span onclick="gvExec('I have rice, chicken, and tomatoes')" style="background:#f5f6ff; border:1px solid #dde1ff; border-radius:20px; padding:8px 14px; font-size:13px; color:#667eea; font-weight:500; cursor:pointer; transition:all 0.15s;">"I have rice, chicken, and tomatoes"</span>
                 </div>
             </div>
+        </div>
+
+        <!-- Smart Suggestions (agentic) -->
+        {% if suggestions %}
+        <div class="card" style="border-radius:20px; overflow:hidden; margin-bottom:12px; background:linear-gradient(135deg, #fff8e7 0%, #fff3d6 100%); border:2px solid #ffd700;">
+            <div style="padding:16px 20px;">
+                <div style="font-size:11px; font-weight:700; color:#b8860b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Smart Suggestions</div>
+                {% for sug in suggestions %}
+                <div id="sug-{{ loop.index }}" style="display:flex; align-items:center; gap:10px; padding:10px 0; {% if not loop.last %}border-bottom:1px solid rgba(184,134,11,0.15);{% endif %}">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:14px; font-weight:600; color:#333;">Add <strong>{{ sug.text }}</strong> to {{ sug.list_name }}?</div>
+                        <div style="font-size:12px; color:#888; margin-top:2px;">{{ sug.reason }}</div>
+                    </div>
+                    <button onclick="acceptSuggestion('{{ sug.list_id }}', '{{ sug.text|replace("'", "\\'") }}', 'sug-{{ loop.index }}')" style="background:#b8860b; color:white; border:none; padding:8px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; width:auto; box-shadow:none; transform:none;">Add</button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Feature links — explore more -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
+            <a href="/whats-for-dinner" style="display:flex; flex-direction:column; align-items:center; gap:6px; background:linear-gradient(135deg, #ff9800 0%, #ff5722 100%); border-radius:16px; padding:18px 14px; text-decoration:none; box-shadow:0 3px 12px rgba(255,87,34,0.2); transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+                <div style="font-size:14px; font-weight:700; color:white;">What's for Dinner?</div>
+                <div style="font-size:11px; color:rgba(255,255,255,0.8);">AI meals from your pantry</div>
+            </a>
+            <a href="/ask" style="display:flex; flex-direction:column; align-items:center; gap:6px; background:white; border-radius:16px; padding:18px 14px; text-decoration:none; box-shadow:0 1px 4px rgba(0,0,0,0.06); border:1.5px solid #e8eeff; transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div style="font-size:14px; font-weight:700; color:#333;">Ask FamPilot</div>
+                <div style="font-size:11px; color:#999;">Chat with your data</div>
+            </a>
         </div>
 
         <!-- Today / Coming Up card -->
