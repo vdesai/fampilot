@@ -866,6 +866,139 @@ def get_usage_info(family_id: str) -> dict:
     }
 
 
+# ── Morning Briefing & Weekly Recap ──
+
+def build_morning_briefing(family_id: str) -> dict:
+    """Build the morning briefing content for push notification."""
+    today = _local_today()
+    today_str = today.isoformat()
+    in3days = (today + timedelta(days=3)).isoformat()
+
+    # Today's events
+    today_items = _execute(
+        """SELECT * FROM items WHERE family_id = ? AND start_date = ?
+           AND (completed IS NULL OR completed = 0) ORDER BY time""",
+        (family_id, today_str), fetch='all') or []
+
+    # Pending chores
+    chores = get_chores_with_status(family_id, today_str)
+    pending_chores = [c for c in chores if not c.get("done_today")]
+
+    # Stale pantry
+    stale = get_stale_pantry_items(family_id)
+
+    # Total list items
+    total_unchecked = 0
+    for lst in get_lists(family_id):
+        items = get_list_items(lst["id"])
+        total_unchecked += sum(1 for i in items if not i.get("checked"))
+
+    # Build title and body
+    parts = []
+    if today_items:
+        if len(today_items) == 1:
+            t = today_items[0]
+            time_str = f" at {t['time']}" if t.get('time') else ""
+            parts.append(f"1 event today: {t['title']}{time_str}")
+        else:
+            parts.append(f"{len(today_items)} events today")
+
+    if pending_chores:
+        names = ", ".join(c["title"] for c in pending_chores[:2])
+        if len(pending_chores) > 2:
+            names += f" +{len(pending_chores) - 2} more"
+        parts.append(f"Chores: {names}")
+
+    if stale:
+        names = ", ".join(s["text"] for s in stale[:3])
+        parts.append(f"Running low: {names}")
+
+    if total_unchecked > 0:
+        parts.append(f"{total_unchecked} items on lists")
+
+    if not parts:
+        parts.append("All clear today!")
+
+    body = ". ".join(parts)
+    if not body.endswith((".", "!", "?")):
+        body += "."
+    title = f"Good morning! {parts[0]}" if parts else "Good morning!"
+
+    return {"title": title, "body": body}
+
+
+def build_weekly_recap(family_id: str) -> dict:
+    """Build the weekly recap content."""
+    today = _local_today()
+    week_ago = (today - timedelta(days=7)).isoformat()
+
+    # Spending this week
+    total_spent = 0
+    for lst in get_lists(family_id):
+        rows = _execute(
+            """SELECT COALESCE(SUM(price), 0) AS total FROM list_items
+               WHERE list_id = ? AND checked = 1 AND price IS NOT NULL AND created_at >= ?""",
+            (lst["id"], week_ago), fetch='one')
+        if rows:
+            total_spent += rows["total"]
+
+    # Chores completed this week
+    chores_done = _execute(
+        """SELECT COUNT(*) AS cnt FROM chore_log cl
+           JOIN chores c ON c.id = cl.chore_id
+           WHERE c.family_id = ? AND cl.done_date >= ?""",
+        (family_id, week_ago), fetch='one')
+    chores_count = chores_done["cnt"] if chores_done else 0
+
+    # Total chores available
+    total_chores = len(get_chores(family_id))
+    chore_total_possible = total_chores * 7 if total_chores > 0 else 0
+
+    # Items added to lists this week
+    items_added = _execute(
+        """SELECT COUNT(*) AS cnt FROM list_items li
+           JOIN lists l ON l.id = li.list_id
+           WHERE l.family_id = ? AND li.created_at >= ?""",
+        (family_id, week_ago), fetch='one')
+    items_count = items_added["cnt"] if items_added else 0
+
+    # Best chore streak
+    best_streak = 0
+    best_chore = ""
+    for c in get_chores(family_id):
+        streak = get_chore_streak(c["id"], today.isoformat())
+        if streak > best_streak:
+            best_streak = streak
+            best_chore = c["title"]
+
+    # Build body
+    parts = []
+    if total_spent > 0:
+        parts.append(f"Spent ${total_spent:.2f} on groceries")
+    if chores_count > 0:
+        parts.append(f"{chores_count} chores completed")
+    if items_count > 0:
+        parts.append(f"{items_count} items tracked")
+    if best_streak >= 3:
+        parts.append(f"Best streak: {best_chore} ({best_streak} days)")
+
+    if not parts:
+        parts.append("Quiet week! Time to get organized?")
+
+    body = ". ".join(parts)
+    if not body.endswith((".", "!", "?")):
+        body += "."
+    title = "Your week in review"
+
+    return {"title": title, "body": body}
+
+
+def get_all_family_ids() -> list:
+    """Get all family IDs for batch operations like morning briefing."""
+    rows = _execute("SELECT id FROM families", fetch='all') or []
+    return [r["id"] for r in rows]
+
+
 # ── Family Data Summary (for AI chat) ──
 
 def get_family_data_summary(family_id: str) -> dict:

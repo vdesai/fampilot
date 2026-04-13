@@ -45,10 +45,13 @@ COOKIE_MAX_AGE = 60 * 60 * 24 * 365 * 2  # 2 years
 
 
 async def _reminder_checker():
-    """Background task: poll every 60 s, log due reminders to stdout."""
+    """Background task: poll every 60 s, send due reminders + daily briefing."""
+    last_briefing_date = None
+    last_recap_weekday = None
     while True:
         await asyncio.sleep(60)
         try:
+            # Send due reminders
             for row in db.get_due_reminders():
                 print(
                     f"[🔔 REMINDER] {(row['type'] or 'item').upper()}: "
@@ -56,8 +59,44 @@ async def _reminder_checker():
                     flush=True,
                 )
                 db.mark_reminder_sent(row["id"])
+
+            # Morning briefing at 8am (check every minute)
+            now = datetime.now()
+            tz_name = os.getenv("APP_TIMEZONE")
+            if tz_name:
+                try:
+                    from zoneinfo import ZoneInfo
+                    now = datetime.now(ZoneInfo(tz_name))
+                except Exception:
+                    pass
+            today = now.date()
+
+            # Send morning briefing at 8:00
+            if now.hour == 8 and now.minute < 2 and last_briefing_date != today:
+                last_briefing_date = today
+                print("[📋 MORNING BRIEFING] Sending...", flush=True)
+                for fid in db.get_all_family_ids():
+                    briefing = db.build_morning_briefing(fid)
+                    sent = push_module.send_to_family(
+                        fid, title=briefing["title"], body=briefing["body"],
+                        url="/", tag="morning-briefing")
+                    if sent:
+                        print(f"  → Sent to family {fid[:8]}... ({sent} devices)", flush=True)
+
+            # Weekly recap Sunday at 7pm
+            if now.weekday() == 6 and now.hour == 19 and now.minute < 2 and last_recap_weekday != today:
+                last_recap_weekday = today
+                print("[📊 WEEKLY RECAP] Sending...", flush=True)
+                for fid in db.get_all_family_ids():
+                    recap = db.build_weekly_recap(fid)
+                    sent = push_module.send_to_family(
+                        fid, title=recap["title"], body=recap["body"],
+                        url="/", tag="weekly-recap")
+                    if sent:
+                        print(f"  → Sent to family {fid[:8]}... ({sent} devices)", flush=True)
+
         except Exception as exc:
-            print(f"[REMINDER ERROR] {exc}", flush=True)
+            print(f"[BACKGROUND ERROR] {exc}", flush=True)
 
 
 @asynccontextmanager
@@ -2214,6 +2253,54 @@ async def accept_suggestion(request: Request,
     db.add_list_item(item_id, list_id, text, added_by=auth["display_name"])
     db.log_activity(auth["family_id"], auth["display_name"], f"added {text} to {lst['name']}", "list_item_added")
     return JSONResponse({"ok": True, "list_name": lst["name"]})
+
+
+# ── Briefing & Recap API ──
+
+@app.post("/api/send-briefing")
+async def send_briefing(request: Request):
+    """Manually trigger morning briefing for the current family."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    briefing = db.build_morning_briefing(auth["family_id"])
+    sent = push_module.send_to_family(
+        auth["family_id"], title=briefing["title"], body=briefing["body"],
+        url="/", tag="morning-briefing")
+    return JSONResponse({"ok": True, "sent": sent, **briefing})
+
+
+@app.post("/api/send-recap")
+async def send_recap(request: Request):
+    """Manually trigger weekly recap for the current family."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    recap = db.build_weekly_recap(auth["family_id"])
+    sent = push_module.send_to_family(
+        auth["family_id"], title=recap["title"], body=recap["body"],
+        url="/", tag="weekly-recap")
+    return JSONResponse({"ok": True, "sent": sent, **recap})
+
+
+@app.get("/api/preview-briefing")
+async def preview_briefing(request: Request):
+    """Preview what the morning briefing would say (no push sent)."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    briefing = db.build_morning_briefing(auth["family_id"])
+    return JSONResponse(briefing)
+
+
+@app.get("/api/preview-recap")
+async def preview_recap(request: Request):
+    """Preview what the weekly recap would say (no push sent)."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    recap = db.build_weekly_recap(auth["family_id"])
+    return JSONResponse(recap)
 
 
 # ── Admin stats (password-protected) ──
