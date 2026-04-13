@@ -430,6 +430,111 @@ def classify_and_extract_from_image(image_path: str, api_key: str) -> Dict:
 # AI EVENT EXTRACTION (legacy — kept for Google Calendar integration)
 # ============================================================================
 
+def suggest_meals_from_pantry(pantry_items: list[str], preferences: str, api_key: str) -> dict:
+    """
+    Suggest meals based on pantry inventory.
+
+    Returns:
+        {"meals": [{"name": str, "description": str, "ingredients": [str],
+                     "have": [str], "missing": [str], "cook_time": str}]}
+    """
+    items_str = ", ".join(pantry_items) if pantry_items else "nothing specific"
+    prompt = f"""You are a family meal assistant. Based on what's in the pantry, suggest 3 meals.
+
+Pantry items available: {items_str}
+{f'Preferences: {preferences}' if preferences else ''}
+
+Assume basic staples are available (salt, pepper, oil, butter, common spices).
+
+Return JSON:
+{{
+  "meals": [
+    {{
+      "name": "Meal name",
+      "description": "One sentence about the dish",
+      "cook_time": "e.g. 25 min",
+      "ingredients": ["all ingredients needed"],
+      "have": ["ingredients from pantry that are available"],
+      "missing": ["ingredients NOT in pantry that need to be bought"]
+    }}
+  ]
+}}
+
+Prioritize meals that use MOSTLY what's already available. Sort by fewest missing items first.
+Keep it practical — family-friendly, not restaurant-fancy."""
+
+    client = Anthropic(api_key=api_key)
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1500,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    cleaned = clean_json_response(message.content[0].text)
+    return json.loads(cleaned)
+
+
+def suggest_meals_from_photo(image_path: str, api_key: str, preferences: str = "") -> dict:
+    """
+    Identify ingredients from a fridge/pantry photo and suggest meals.
+
+    Returns:
+        {"identified": [str], "meals": [...same as above...]}
+    """
+    import base64
+    image_file = Path(image_path)
+    if not image_file.exists():
+        raise FileNotFoundError(f"Image file not found: {image_path}")
+
+    raw = image_file.read_bytes()
+    if len(raw) > MAX_IMAGE_BYTES:
+        raw, media_type = _compress_image(image_file)
+    else:
+        media_types = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+                       '.gif': 'image/gif', '.webp': 'image/webp'}
+        media_type = media_types.get(image_file.suffix.lower(), 'image/jpeg')
+
+    image_data = base64.standard_b64encode(raw).decode("utf-8")
+
+    prompt = f"""Look at this photo of a fridge or pantry. Identify all visible food items.
+Then suggest 3 meals that can be made with what you see.
+{f'Preferences: {preferences}' if preferences else ''}
+
+Assume basic staples are available (salt, pepper, oil, butter, common spices).
+
+Return JSON:
+{{
+  "identified": ["item1", "item2", "...all food items you can see"],
+  "meals": [
+    {{
+      "name": "Meal name",
+      "description": "One sentence about the dish",
+      "cook_time": "e.g. 25 min",
+      "ingredients": ["all ingredients needed"],
+      "have": ["ingredients visible in the photo"],
+      "missing": ["ingredients NOT visible that would be needed"]
+    }}
+  ]
+}}
+
+Prioritize meals using MOSTLY what's visible. Sort by fewest missing items first.
+Keep it practical and family-friendly."""
+
+    client = Anthropic(api_key=api_key)
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=2000,
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
+                {"type": "text", "text": prompt}
+            ]
+        }]
+    )
+    cleaned = clean_json_response(message.content[0].text)
+    return json.loads(cleaned)
+
+
 def clean_json_response(response: str) -> str:
     """
     Clean Claude API response to extract valid JSON.

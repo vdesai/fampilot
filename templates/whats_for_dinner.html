@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What's for Dinner? – FamPilot</title>
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/static/manifest.json">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #4a63d2 0%, #5c3d8f 100%);
+            padding: 20px 16px 28px;
+            text-align: center;
+        }
+        .page-header-inner { max-width: 540px; margin: 0 auto; }
+        .page-emoji { font-size: 48px; margin-bottom: 8px; }
+        .page-title { font-size: 26px; font-weight: 800; color: white; margin-bottom: 4px; }
+        .page-sub { font-size: 14px; color: rgba(255,255,255,0.75); }
+
+        .content {
+            max-width: 540px;
+            margin: 0 auto;
+            padding: 16px 16px 120px;
+            background: #f5f5f7;
+            min-height: calc(100vh - 200px);
+        }
+
+        /* Action cards */
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .action-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px 16px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .action-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            border-color: #667eea;
+        }
+        .action-card.active { border-color: #667eea; background: #f8f9ff; }
+        .action-icon { font-size: 36px; margin-bottom: 10px; }
+        .action-label { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 4px; }
+        .action-desc { font-size: 12px; color: #888; }
+
+        /* Preferences */
+        .pref-section {
+            background: white;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+        }
+        .pref-label { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 8px; }
+        .pref-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .pref-chip {
+            padding: 6px 12px;
+            border: 1.5px solid #e8e8e8;
+            border-radius: 20px;
+            background: #fafafa;
+            font-size: 13px;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.15s;
+        }
+        .pref-chip:hover, .pref-chip.active {
+            border-color: #667eea;
+            background: #f0f2ff;
+            color: #667eea;
+        }
+
+        /* Suggest button */
+        .suggest-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.15s;
+        }
+        .suggest-btn:hover { transform: translateY(-1px); }
+        .suggest-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .suggest-btn .spinner {
+            display: none;
+            width: 20px; height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .suggest-btn.loading .spinner { display: block; }
+        .suggest-btn.loading .btn-text { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Camera input */
+        .camera-input { display: none; }
+
+        /* Processing */
+        .processing {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 200;
+        }
+        .processing-card {
+            background: white; border-radius: 16px;
+            padding: 32px 40px; text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        }
+        .processing-spinner {
+            width: 36px; height: 36px;
+            border: 4px solid #e0e0e0; border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+        .processing-text { font-size: 15px; color: #555; font-weight: 500; }
+
+        /* Results */
+        .results { display: none; }
+        .results.visible { display: block; }
+
+        .pantry-info {
+            background: #e8f5e9;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #2e7d32;
+        }
+        .pantry-info strong { font-weight: 700; }
+
+        .identified-section {
+            background: white;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+        }
+        .identified-title {
+            font-size: 14px; font-weight: 700; color: #333; margin-bottom: 10px;
+        }
+        .identified-chips {
+            display: flex; flex-wrap: wrap; gap: 6px;
+        }
+        .identified-chip {
+            padding: 4px 10px; background: #e8f5e9; border-radius: 12px;
+            font-size: 12px; color: #2e7d32; font-weight: 500;
+        }
+
+        /* Meal card */
+        .meal-card {
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .meal-header {
+            padding: 16px 18px 12px;
+        }
+        .meal-name {
+            font-size: 18px; font-weight: 700; color: #333; margin-bottom: 4px;
+        }
+        .meal-desc {
+            font-size: 13px; color: #888; margin-bottom: 8px;
+        }
+        .meal-meta {
+            display: flex; gap: 12px; font-size: 12px; color: #999;
+        }
+        .meal-meta span { display: flex; align-items: center; gap: 4px; }
+
+        .meal-ingredients {
+            padding: 0 18px 12px;
+        }
+        .ing-label {
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.5px; color: #aaa; margin-bottom: 6px;
+        }
+        .ing-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+        .ing-have {
+            padding: 4px 10px; background: #e8f5e9; border-radius: 10px;
+            font-size: 12px; color: #2e7d32;
+        }
+        .ing-missing {
+            padding: 4px 10px; background: #fff3e0; border-radius: 10px;
+            font-size: 12px; color: #e65100; font-weight: 600;
+        }
+
+        .meal-footer {
+            padding: 12px 18px;
+            border-top: 1px solid #f0f0f0;
+            display: flex; gap: 8px;
+        }
+        .meal-btn {
+            flex: 1; padding: 10px;
+            border: none; border-radius: 10px;
+            font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: transform 0.15s;
+        }
+        .meal-btn:hover { transform: translateY(-1px); }
+        .meal-btn-shop {
+            background: #667eea; color: white;
+        }
+        .meal-btn-shop:disabled { opacity: 0.5; cursor: default; transform: none; }
+        .meal-btn-pantry {
+            background: #e8f5e9; color: #2e7d32;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .back-link:hover { color: white; }
+    </style>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="page-header">
+        <div class="page-header-inner">
+            <div class="page-emoji">🍽️</div>
+            <div class="page-title">What's for Dinner?</div>
+            <div class="page-sub">AI suggests meals from what you already have</div>
+        </div>
+    </div>
+
+    <div class="content">
+        <a href="/meals" class="back-link">< Back to Meal Planner</a>
+
+        <!-- Mode selection -->
+        <div class="actions">
+            <div class="action-card active" id="pantryMode" onclick="setMode('pantry')">
+                <div class="action-icon">🏠</div>
+                <div class="action-label">From Pantry</div>
+                <div class="action-desc">Use what's already tracked</div>
+            </div>
+            <div class="action-card" id="photoMode" onclick="setMode('photo')">
+                <div class="action-icon">📸</div>
+                <div class="action-label">Snap Fridge</div>
+                <div class="action-desc">Take a photo of your fridge</div>
+            </div>
+        </div>
+
+        <!-- Preferences -->
+        <div class="pref-section">
+            <div class="pref-label">Any preferences?</div>
+            <div class="pref-chips" id="prefChips">
+                <span class="pref-chip" onclick="togglePref(this, 'quick meals')">Quick</span>
+                <span class="pref-chip" onclick="togglePref(this, 'kid-friendly')">Kid-Friendly</span>
+                <span class="pref-chip" onclick="togglePref(this, 'vegetarian')">Vegetarian</span>
+                <span class="pref-chip" onclick="togglePref(this, 'high-protein')">High Protein</span>
+                <span class="pref-chip" onclick="togglePref(this, 'low-carb')">Low Carb</span>
+                <span class="pref-chip" onclick="togglePref(this, 'budget-friendly')">Budget</span>
+            </div>
+        </div>
+
+        <!-- Suggest button (pantry mode) -->
+        <button class="suggest-btn" id="suggestBtn" onclick="suggestFromPantry()">
+            <span class="spinner"></span>
+            <span class="btn-text">What can I make?</span>
+        </button>
+
+        <!-- Camera input (photo mode) -->
+        <input type="file" id="cameraInput" class="camera-input" accept="image/*" capture="environment" onchange="handleFridgePhoto(this)">
+
+        <!-- Results -->
+        <div class="results" id="results">
+            <div id="pantryInfo"></div>
+            <div id="identifiedSection"></div>
+            <div id="mealCards"></div>
+        </div>
+    </div>
+
+    <script>
+        let mode = 'pantry';
+        const prefs = new Set();
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('pantryMode').classList.toggle('active', m === 'pantry');
+            document.getElementById('photoMode').classList.toggle('active', m === 'photo');
+            const btn = document.getElementById('suggestBtn');
+            if (m === 'pantry') {
+                btn.style.display = '';
+                btn.querySelector('.btn-text').textContent = 'What can I make?';
+                btn.onclick = suggestFromPantry;
+            } else {
+                btn.style.display = '';
+                btn.querySelector('.btn-text').textContent = 'Take a photo of your fridge';
+                btn.onclick = () => document.getElementById('cameraInput').click();
+            }
+        }
+
+        function togglePref(el, pref) {
+            if (prefs.has(pref)) { prefs.delete(pref); el.classList.remove('active'); }
+            else { prefs.add(pref); el.classList.add('active'); }
+        }
+
+        function escapeHtml(text) {
+            const d = document.createElement('div');
+            d.textContent = text;
+            return d.innerHTML;
+        }
+
+        async function suggestFromPantry() {
+            const btn = document.getElementById('suggestBtn');
+            btn.classList.add('loading');
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/suggest-meals', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `preferences=${encodeURIComponent(Array.from(prefs).join(', '))}`,
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    showResults(data);
+                } else {
+                    alert(data.error || 'Something went wrong');
+                }
+            } catch (e) {
+                alert('Failed to get suggestions');
+            }
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+
+        async function handleFridgePhoto(input) {
+            const file = input.files[0];
+            if (!file) return;
+            input.value = '';
+
+            // Show processing overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'processing';
+            overlay.id = 'processingOverlay';
+            overlay.innerHTML = `
+                <div class="processing-card">
+                    <div class="processing-spinner"></div>
+                    <div class="processing-text">Looking at your fridge...</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('preferences', Array.from(prefs).join(', '));
+
+            try {
+                const res = await fetch('/api/suggest-meals-from-photo', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    showResults(data);
+                } else {
+                    alert(data.error || 'Something went wrong');
+                }
+            } catch (e) {
+                alert('Failed to scan fridge');
+            }
+            document.getElementById('processingOverlay')?.remove();
+        }
+
+        function showResults(data) {
+            const results = document.getElementById('results');
+            results.classList.add('visible');
+
+            // Pantry info
+            const pantryInfo = document.getElementById('pantryInfo');
+            if (data.pantry_items && data.pantry_items.length > 0) {
+                pantryInfo.innerHTML = `<div class="pantry-info">
+                    <strong>${data.pantry_items.length} items</strong> in your pantry: ${data.pantry_items.join(', ')}
+                </div>`;
+            } else if (data.pantry_items) {
+                pantryInfo.innerHTML = `<div class="pantry-info">Your pantry is empty. Add items by saying "I have rice, chicken..." on the home page.</div>`;
+            } else {
+                pantryInfo.innerHTML = '';
+            }
+
+            // Identified items (from photo)
+            const identifiedSection = document.getElementById('identifiedSection');
+            if (data.identified && data.identified.length > 0) {
+                let extra = '';
+                if (data.added_to_pantry > 0) {
+                    extra = `<div style="font-size:12px;color:#888;margin-top:8px;">${data.added_to_pantry} new items added to your Pantry</div>`;
+                }
+                identifiedSection.innerHTML = `
+                    <div class="identified-section">
+                        <div class="identified-title">Found in your fridge</div>
+                        <div class="identified-chips">
+                            ${data.identified.map(i => `<span class="identified-chip">${escapeHtml(i)}</span>`).join('')}
+                        </div>
+                        ${extra}
+                    </div>`;
+            } else {
+                identifiedSection.innerHTML = '';
+            }
+
+            // Meal cards
+            const mealCards = document.getElementById('mealCards');
+            if (!data.meals || data.meals.length === 0) {
+                mealCards.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">No meals could be suggested. Try adding more items to your pantry.</div>';
+                return;
+            }
+
+            mealCards.innerHTML = data.meals.map((meal, i) => {
+                const haveChips = (meal.have || []).map(item =>
+                    `<span class="ing-have">${escapeHtml(item)}</span>`
+                ).join('');
+                const missingChips = (meal.missing || []).map(item =>
+                    `<span class="ing-missing">${escapeHtml(item)}</span>`
+                ).join('');
+                const missingCount = (meal.missing || []).length;
+                const missingJson = JSON.stringify(meal.missing || []).replace(/'/g, "\\'");
+
+                return `
+                <div class="meal-card">
+                    <div class="meal-header">
+                        <div class="meal-name">${escapeHtml(meal.name)}</div>
+                        <div class="meal-desc">${escapeHtml(meal.description || '')}</div>
+                        <div class="meal-meta">
+                            ${meal.cook_time ? `<span>&#9201; ${escapeHtml(meal.cook_time)}</span>` : ''}
+                            <span>${missingCount === 0 ? '&#9989; Ready to cook!' : `${missingCount} item${missingCount === 1 ? '' : 's'} needed`}</span>
+                        </div>
+                    </div>
+                    <div class="meal-ingredients">
+                        ${haveChips ? `<div class="ing-label">Have</div><div class="ing-list">${haveChips}</div>` : ''}
+                        ${missingChips ? `<div class="ing-label">Need to buy</div><div class="ing-list">${missingChips}</div>` : ''}
+                    </div>
+                    ${missingCount > 0 ? `
+                    <div class="meal-footer">
+                        <button class="meal-btn meal-btn-shop" id="shop-${i}" onclick="addMissing(${i}, '${missingJson}')">
+                            Add ${missingCount} to grocery list
+                        </button>
+                    </div>` : `
+                    <div class="meal-footer">
+                        <div class="meal-btn meal-btn-pantry" style="text-align:center;cursor:default;">
+                            You have everything!
+                        </div>
+                    </div>`}
+                </div>`;
+            }).join('');
+        }
+
+        async function addMissing(index, itemsJson) {
+            const btn = document.getElementById(`shop-${index}`);
+            btn.textContent = 'Adding...';
+            btn.disabled = true;
+            const items = JSON.parse(itemsJson);
+            const res = await fetch('/api/add-missing-to-list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `items_json=${encodeURIComponent(JSON.stringify(items))}`,
+            });
+            const data = await res.json();
+            if (data.ok) {
+                btn.textContent = `Added ${data.count} items!`;
+                btn.style.background = '#43a047';
+            } else {
+                btn.textContent = 'Failed';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

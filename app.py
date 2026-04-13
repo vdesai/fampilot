@@ -30,6 +30,8 @@ from main import (
     classify_and_extract_from_image,
     classify_and_extract_multi,
     classify_and_extract_multi_from_image,
+    suggest_meals_from_pantry,
+    suggest_meals_from_photo,
     authenticate_google_calendar,
     create_calendar_event,
     GOOGLE_CALENDAR_AVAILABLE,
@@ -1542,6 +1544,125 @@ async def meals_add_to_list(request: Request,
         "skipped": skipped,
         "skipped_count": len(skipped),
     })
+
+
+# ── "What's for dinner?" — AI meal suggestions ──
+
+@app.get("/whats-for-dinner", response_class=HTMLResponse)
+async def whats_for_dinner_page(request: Request):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+    return templates.TemplateResponse(request, "whats_for_dinner.html", {
+        "request": request,
+        "nav_page": "meals",
+        "auth": auth,
+    })
+
+
+@app.post("/api/suggest-meals")
+async def suggest_meals(request: Request):
+    """Suggest meals based on pantry inventory."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    family_id = auth["family_id"]
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return JSONResponse({"error": "API key not configured"}, status_code=500)
+
+    pantry_rows = db.get_pantry_items(family_id)
+    pantry_items = [r["text"] for r in pantry_rows]
+
+    form = await request.form()
+    preferences = form.get("preferences", "")
+
+    try:
+        result = suggest_meals_from_pantry(pantry_items, preferences, api_key)
+        return JSONResponse({"ok": True, **result, "pantry_items": pantry_items})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/suggest-meals-from-photo")
+async def suggest_meals_photo(request: Request, file: UploadFile = File(...)):
+    """Identify fridge contents and suggest meals."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return JSONResponse({"error": "API key not configured"}, status_code=500)
+
+    form = await request.form()
+    preferences = form.get("preferences", "")
+
+    # Save uploaded photo
+    upload_dir = Path("uploads")
+    upload_dir.mkdir(exist_ok=True)
+    ext = Path(file.filename or "photo.jpg").suffix or ".jpg"
+    save_path = upload_dir / f"fridge_{uuid4().hex[:8]}{ext}"
+    content = await file.read()
+    save_path.write_bytes(content)
+
+    try:
+        result = suggest_meals_from_photo(str(save_path), api_key, preferences)
+        # Also update pantry with identified items
+        family_id = auth["family_id"]
+        identified = result.get("identified", [])
+        if identified:
+            pantry = None
+            for l in db.get_lists(family_id):
+                if l["name"].lower() in ("pantry", "inventory", "home inventory"):
+                    pantry = l
+                    break
+            if not pantry:
+                pantry_id = str(uuid4())
+                db.create_list(pantry_id, family_id, "Pantry", icon="🏠")
+                pantry = {"id": pantry_id}
+            # Get existing pantry items to avoid duplicates
+            existing = {li["text"].lower().strip() for li in db.get_list_items(pantry["id"]) if not li["checked"]}
+            added_to_pantry = 0
+            for item_text in identified:
+                if item_text.lower().strip() not in existing:
+                    db.add_list_item(str(uuid4()), pantry["id"], item_text, added_by="Fridge Scan")
+                    added_to_pantry += 1
+            result["added_to_pantry"] = added_to_pantry
+        return JSONResponse({"ok": True, **result})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    finally:
+        save_path.unlink(missing_ok=True)
+
+
+@app.post("/api/add-missing-to-list")
+async def add_missing_to_list(request: Request,
+                               items_json: str = Form("[]"),
+                               list_id: str = Form("")):
+    """Add missing meal ingredients to a grocery list."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    family_id = auth["family_id"]
+    items = json.loads(items_json)
+
+    if not list_id:
+        # Find or create Groceries list
+        for l in db.get_lists(family_id):
+            if l["name"].lower() in ("groceries", "grocery list", "grocery"):
+                list_id = l["id"]
+                break
+        if not list_id:
+            list_id = str(uuid4())
+            db.create_list(list_id, family_id, "Groceries", icon="🛒")
+
+    added = 0
+    for item_text in items:
+        if item_text.strip():
+            db.add_list_item(str(uuid4()), list_id, item_text.strip(), added_by="Meal Suggestion")
+            added += 1
+
+    return JSONResponse({"ok": True, "count": added, "list_id": list_id})
 
 
 # ── Voice / AI agent routes ──

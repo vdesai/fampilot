@@ -264,6 +264,13 @@
         <div class="msg msg-error">{{ error }}</div>
         {% endif %}
 
+        <!-- What's for dinner CTA -->
+        <a href="/whats-for-dinner" style="display:block; background:linear-gradient(135deg, #ff9800 0%, #f44336 100%); border-radius:16px; padding:20px; margin-bottom:16px; text-decoration:none; color:white; box-shadow:0 4px 15px rgba(244,67,54,0.3); transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+            <div style="font-size:28px; margin-bottom:6px;">🍽️</div>
+            <div style="font-size:18px; font-weight:700; margin-bottom:4px;">What's for Dinner?</div>
+            <div style="font-size:13px; opacity:0.85;">AI suggests meals from what's in your pantry — or snap your fridge</div>
+        </a>
+
         <!-- Generate form -->
         <div class="gen-card">
             <form action="/meals/generate" method="post" id="genForm">
