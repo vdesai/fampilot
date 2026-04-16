@@ -149,7 +149,7 @@ CRITICAL: Return ONLY the raw JSON object. No markdown, no code blocks, no expla
 
     try:
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-opus-4-7",
             max_tokens=1024,
             messages=[
                 {
@@ -274,7 +274,7 @@ def classify_and_extract(text: str, api_key: str) -> Dict:
     client = Anthropic(api_key=api_key)
 
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-opus-4-7",
         max_tokens=1024,
         messages=[{"role": "user", "content": f"{_classify_prompt()}\n\nText:\n{text}"}]
     )
@@ -296,7 +296,7 @@ def classify_and_extract_multi(text: str, api_key: str) -> dict:
     """
     client = Anthropic(api_key=api_key)
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-opus-4-7",
         max_tokens=2048,
         messages=[{"role": "user", "content": f"{_multi_classify_prompt()}\n\nInput:\n{text}"}]
     )
@@ -371,7 +371,7 @@ def classify_and_extract_multi_from_image(image_path: str, api_key: str) -> dict
     client = Anthropic(api_key=api_key)
 
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-opus-4-7",
         max_tokens=2048,
         messages=[{
             "role": "user",
@@ -411,7 +411,7 @@ def classify_and_extract_from_image(image_path: str, api_key: str) -> Dict:
     client = Anthropic(api_key=api_key)
 
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-opus-4-7",
         max_tokens=1024,
         messages=[{
             "role": "user",
@@ -465,7 +465,7 @@ Keep it practical — family-friendly, not restaurant-fancy."""
 
     client = Anthropic(api_key=api_key)
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-opus-4-7",
         max_tokens=1500,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -521,7 +521,7 @@ Keep it practical and family-friendly."""
 
     client = Anthropic(api_key=api_key)
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-opus-4-7",
         max_tokens=2000,
         messages=[{
             "role": "user",
@@ -578,7 +578,7 @@ Rules:
 
     client = Anthropic(api_key=api_key)
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-opus-4-7",
         max_tokens=2000,
         messages=[{
             "role": "user",
@@ -609,7 +609,7 @@ Question: {question}"""
 
     client = Anthropic(api_key=api_key)
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-opus-4-7",
         max_tokens=500,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -679,7 +679,7 @@ CRITICAL: Return ONLY the raw JSON object. No markdown, no code blocks, no expla
 
     try:
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-opus-4-7",
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}]
         )
