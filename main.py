@@ -483,6 +483,79 @@ def estimate_expiry_date(item_name: str, from_date: Optional[datetime] = None) -
     return (base + timedelta(days=days)).isoformat()
 
 
+# ── Grocery category classifier ──
+
+_CATEGORY_KEYWORDS: list[tuple[str, tuple[str, ...]]] = [
+    ("produce", ("apple", "banana", "orange", "lemon", "lime", "grape", "berry",
+                  "berries", "strawberry", "blueberry", "raspberry", "tomato",
+                  "cucumber", "pepper", "lettuce", "spinach", "arugula", "kale",
+                  "onion", "garlic", "potato", "carrot", "celery", "broccoli",
+                  "cauliflower", "zucchini", "squash", "mushroom", "avocado",
+                  "cilantro", "parsley", "basil", "ginger", "cabbage", "corn",
+                  "radish", "beet", "asparagus", "peach", "pear", "plum",
+                  "melon", "mango", "pineapple", "kiwi")),
+    ("dairy",   ("milk", "cheese", "yogurt", "butter", "cream", "sour cream",
+                  "cottage", "ricotta", "mozzarella", "cheddar", "parmesan",
+                  "feta", "eggs", "egg ")),
+    ("meat",    ("chicken", "beef", "pork", "turkey", "bacon", "ham", "sausage",
+                  "ground", "steak", "ribs", "lamb", "fish", "salmon", "tuna",
+                  "tilapia", "shrimp", "cod", "crab", "lobster")),
+    ("frozen",  ("frozen", "ice cream", "popsicle")),
+    ("bakery",  ("bread", "bagel", "muffin", "croissant", "donut", "cake",
+                  "tortilla", "roll", "bun", "pita", "naan")),
+    ("pantry",  ("flour", "sugar", "salt", "pepper", "rice", "pasta", "noodle",
+                  "oat", "cereal", "canned", "can of", "beans", "lentil",
+                  "chickpea", "oil", "vinegar", "soy sauce", "ketchup",
+                  "mustard", "mayo", "honey", "jam", "peanut butter", "spice",
+                  "sauce", "broth", "stock")),
+    ("beverages", ("coffee", "tea", "juice", "soda", "water", "sparkling",
+                   "beer", "wine", "kombucha", "cola", "sprite")),
+    ("snacks",   ("chip", "cracker", "pretzel", "cookie", "candy", "chocolate",
+                   "granola", "bar ", "popcorn", "nuts", "almond", "cashew",
+                   "peanut")),
+    ("household", ("paper towel", "toilet paper", "tissue", "napkin", "soap",
+                    "detergent", "shampoo", "conditioner", "lotion", "toothpaste",
+                    "toothbrush", "sponge", "bleach", "cleaner", "trash bag",
+                    "ziploc", "foil", "plastic wrap", "diaper", "wipe",
+                    "deodorant", "razor")),
+]
+
+
+def _stem(word: str) -> str:
+    """Naive plural stripper: strawberries→strawberry, tomatoes→tomato, carrots→carrot."""
+    if word.endswith("ies") and len(word) > 4:
+        return word[:-3] + "y"
+    if word.endswith("es") and len(word) > 3:
+        return word[:-2]
+    if word.endswith("s") and not word.endswith("ss") and len(word) > 3:
+        return word[:-1]
+    return word
+
+
+def classify_item_category(item_name: str) -> str:
+    """Return a coarse category string. Falls back to 'other'.
+
+    Single-word keywords match whole tokens (after naive plural stripping) to
+    avoid false positives like "oil" in "toilet". Multi-word phrases use
+    substring match.
+    """
+    name = (item_name or "").lower()
+    if not name:
+        return "other"
+    words = set(re.findall(r"[a-z]+", name))
+    stems = {_stem(w) for w in words} | words
+    for category, keywords in _CATEGORY_KEYWORDS:
+        for kw in keywords:
+            kw_stripped = kw.strip()
+            if " " in kw_stripped:
+                if kw_stripped in name:
+                    return category
+            else:
+                if kw_stripped in stems:
+                    return category
+    return "other"
+
+
 def suggest_meals_from_pantry(pantry_items, preferences: str, api_key: str) -> dict:
     """
     Suggest meals based on pantry inventory.

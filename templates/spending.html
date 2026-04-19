@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spending – FamPilot</title>
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/static/manifest.json">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            min-height: 100vh;
+            color: #333;
+        }
+        .page-content {
+            max-width: 540px;
+            margin: 0 auto;
+            padding: 24px 16px 100px;
+        }
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .back-link {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .page-sub {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 20px;
+        }
+
+        /* Period tabs */
+        .period-tabs {
+            display: flex;
+            gap: 4px;
+            background: white;
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .period-tab {
+            flex: 1;
+            padding: 10px 8px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .period-tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Hero amount */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 18px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 16px rgba(102,126,234,0.25);
+        }
+        .hero-label {
+            font-size: 13px;
+            opacity: 0.85;
+            font-weight: 500;
+        }
+        .hero-amount {
+            font-size: 40px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-top: 4px;
+        }
+        .hero-meta {
+            margin-top: 8px;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        .hero-trend {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.22);
+            font-weight: 700;
+            font-size: 12px;
+            margin-left: 6px;
+        }
+        .hero-trend.up { background: rgba(255,99,71,0.35); }
+        .hero-trend.down { background: rgba(46,204,113,0.4); }
+
+        /* Card */
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 16px 18px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        /* Waste callout */
+        .waste-card {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border-left: 4px solid #ef6c00;
+        }
+        .waste-amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: #c62828;
+        }
+        .waste-sub {
+            font-size: 13px;
+            color: #5d4037;
+            margin-top: 4px;
+        }
+        .waste-items {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .waste-chip {
+            padding: 4px 10px;
+            background: white;
+            border: 1px solid #ffab91;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #c62828;
+            font-weight: 600;
+        }
+        .waste-untracked {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #888;
+            font-style: italic;
+        }
+
+        /* Category bars */
+        .cat-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .cat-row:last-child { margin-bottom: 0; }
+        .cat-name {
+            flex: 0 0 78px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            text-transform: capitalize;
+        }
+        .cat-bar-wrap {
+            flex: 1;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .cat-bar {
+            height: 100%;
+            border-radius: 4px;
+        }
+        .cat-amt {
+            flex: 0 0 62px;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        /* Top items */
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+        .item-row:last-child { border-bottom: none; }
+        .item-row .name { color: #333; text-transform: capitalize; }
+        .item-row .amt { font-weight: 700; color: #333; }
+
+        .empty {
+            text-align: center;
+            color: #aaa;
+            padding: 24px 0;
+            font-size: 14px;
+        }
+
+        /* Category colors — coarse palette */
+        .bar-produce { background: #66bb6a; }
+        .bar-dairy { background: #42a5f5; }
+        .bar-meat { background: #ef5350; }
+        .bar-frozen { background: #26c6da; }
+        .bar-bakery { background: #ab7c4f; }
+        .bar-pantry { background: #ffa726; }
+        .bar-beverages { background: #5c6bc0; }
+        .bar-snacks { background: #ec407a; }
+        .bar-household { background: #8e24aa; }
+        .bar-other { background: #9e9e9e; }
+    </style>
+</head>
+<body>
+    {% include "_nav.html" %}
+    <div class="page-content">
+        <div class="page-header">
+            <a href="/lists" class="back-link">&lt; Lists</a>
+            <div class="page-title">Spending</div>
+        </div>
+        <div class="page-sub">Pulled from checked items with prices (receipts + manual)</div>
+
+        <div class="period-tabs">
+            <button class="period-tab" data-period="week">This week</button>
+            <button class="period-tab active" data-period="month">This month</button>
+            <button class="period-tab" data-period="all">All time</button>
+        </div>
+
+        {% set periods = [('week', week), ('month', month), ('all', all_time)] %}
+        {% for key, p in periods %}
+        <div class="period-panel" data-period="{{ key }}" {% if key != 'month' %}style="display:none;"{% endif %}>
+            <div class="hero">
+                <div class="hero-label">
+                    {% if key == 'week' %}This week so far{% elif key == 'month' %}This month so far{% else %}All time{% endif %}
+                </div>
+                <div class="hero-amount">${{ "%.2f"|format(p.total) }}</div>
+                <div class="hero-meta">
+                    {{ p.count }} purchased item{{ '' if p.count == 1 else 's' }}
+                    {% if key == 'month' and month_change_pct is not none %}
+                        {% if month_change_pct > 0 %}
+                            <span class="hero-trend up">↑ {{ month_change_pct }}% vs last month</span>
+                        {% elif month_change_pct < 0 %}
+                            <span class="hero-trend down">↓ {{ -month_change_pct }}% vs last month</span>
+                        {% else %}
+                            <span class="hero-trend">flat vs last month</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if key == 'month' and wasted_total > 0 %}
+            <div class="card waste-card">
+                <div class="waste-amount">${{ "%.2f"|format(wasted_total) }} likely wasted</div>
+                <div class="waste-sub">
+                    {{ wasted_count }} pantry item{{ '' if wasted_count == 1 else 's' }} passed their expiry date unused.
+                </div>
+                {% if wasted_items %}
+                <div class="waste-items">
+                    {% for w in wasted_items %}
+                    <span class="waste-chip">{{ w.text }} · ${{ "%.2f"|format(w.amount) }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% if wasted_untracked > 0 %}
+                <div class="waste-untracked">+ {{ wasted_untracked }} expired item{{ '' if wasted_untracked == 1 else 's' }} without price data</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-title">By category</div>
+                {% if p.by_category %}
+                    {% set top_cat_amt = p.by_category[0][1] %}
+                    {% for cat, amt in p.by_category %}
+                    <div class="cat-row">
+                        <div class="cat-name">{{ cat }}</div>
+                        <div class="cat-bar-wrap">
+                            <div class="cat-bar bar-{{ cat }}" style="width: {{ (amt / top_cat_amt * 100) if top_cat_amt else 0 }}%;"></div>
+                        </div>
+                        <div class="cat-amt">${{ "%.2f"|format(amt) }}</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty">No spending yet. Scan a receipt on a grocery list to see totals here.</div>
+                {% endif %}
+            </div>
+
+            {% if p.top_items %}
+            <div class="card">
+                <div class="card-title">Top items by spend</div>
+                {% for name, amt in p.top_items %}
+                <div class="item-row">
+                    <div class="name">{{ name }}</div>
+                    <div class="amt">${{ "%.2f"|format(amt) }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if p.by_list|length > 1 %}
+            <div class="card">
+                <div class="card-title">By list</div>
+                {% for lname, amt in p.by_list %}
+                <div class="item-row">
+                    <div class="name">{{ lname }}</div>
+                    <div class="amt">${{ "%.2f"|format(amt) }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        const tabs = document.querySelectorAll('.period-tab');
+        const panels = document.querySelectorAll('.period-panel');
+        tabs.forEach(t => t.addEventListener('click', () => {
+            tabs.forEach(x => x.classList.remove('active'));
+            t.classList.add('active');
+            const key = t.dataset.period;
+            panels.forEach(p => p.style.display = (p.dataset.period === key ? '' : 'none'));
+        }));
+    </script>
+</body>
+</html>

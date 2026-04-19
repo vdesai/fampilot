@@ -34,6 +34,7 @@ from main import (
     suggest_meals_from_photo,
     extract_receipt_items,
     estimate_expiry_date,
+    classify_item_category,
     answer_family_question,
     authenticate_google_calendar,
     create_calendar_event,
@@ -1254,11 +1255,101 @@ async def lists_page(request: Request):
     if not auth:
         return RedirectResponse(url="/welcome", status_code=303)
     lists = db.get_list_summary(auth["family_id"])
+    # Quick spend summary for the month for the top-of-page card
+    today = date.today()
+    month_start = today.replace(day=1).isoformat()
+    month_items = db.get_priced_items(auth["family_id"], since=month_start)
+    month_total = sum((i["price"] or 0) * (i["quantity"] or 1) for i in month_items)
     return templates.TemplateResponse(request, "lists.html", {
         "request": request,
         "lists": lists,
+        "month_spend_total": month_total,
+        "month_spend_count": len(month_items),
         "nav_page": "lists",
         "auth": auth,
+    })
+
+
+@app.get("/spending", response_class=HTMLResponse)
+async def spending_page(request: Request):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+    family_id = auth["family_id"]
+    today = date.today()
+    week_start = (today - timedelta(days=today.weekday())).isoformat()
+    month_start = today.replace(day=1).isoformat()
+
+    all_items = db.get_priced_items(family_id)
+    wasted = db.get_wasted_pantry_items(family_id)
+
+    def line_total(it) -> float:
+        return float(it["price"] or 0) * int(it["quantity"] or 1)
+
+    def bucket(items, since):
+        filtered = [i for i in items if (i["created_at"] or "") >= since]
+        by_cat: dict[str, float] = {}
+        by_list: dict[str, float] = {}
+        by_item: dict[str, float] = {}
+        for i in filtered:
+            amt = line_total(i)
+            cat = classify_item_category(i["text"])
+            by_cat[cat] = by_cat.get(cat, 0) + amt
+            by_list[i["list_name"]] = by_list.get(i["list_name"], 0) + amt
+            key = i["text"].strip().lower()
+            by_item[key] = by_item.get(key, 0) + amt
+        return {
+            "total": sum(line_total(i) for i in filtered),
+            "count": len(filtered),
+            "by_category": sorted(by_cat.items(), key=lambda kv: -kv[1]),
+            "by_list": sorted(by_list.items(), key=lambda kv: -kv[1]),
+            "top_items": sorted(by_item.items(), key=lambda kv: -kv[1])[:8],
+        }
+
+    week = bucket(all_items, week_start)
+    month = bucket(all_items, month_start)
+    all_time = bucket(all_items, "")
+
+    # Previous month for trend comparison
+    first_of_this_month = today.replace(day=1)
+    last_of_prev_month = first_of_this_month - timedelta(days=1)
+    prev_month_start = last_of_prev_month.replace(day=1).isoformat()
+    prev_month_items = [
+        i for i in all_items
+        if prev_month_start <= (i["created_at"] or "") < month_start
+    ]
+    prev_month_total = sum(line_total(i) for i in prev_month_items)
+    if prev_month_total > 0:
+        month_change_pct = round((month["total"] - prev_month_total) / prev_month_total * 100)
+    else:
+        month_change_pct = None
+
+    wasted_total = 0.0
+    wasted_with_price = []
+    for w in wasted:
+        if w["price"] and w["price"] > 0:
+            amt = float(w["price"]) * int(w["quantity"] or 1)
+            wasted_total += amt
+            wasted_with_price.append({
+                "text": w["text"],
+                "amount": amt,
+                "expires_at": w["expires_at"],
+            })
+    wasted_with_price.sort(key=lambda w: -w["amount"])
+
+    return templates.TemplateResponse(request, "spending.html", {
+        "request": request,
+        "nav_page": "lists",
+        "auth": auth,
+        "week": week,
+        "month": month,
+        "all_time": all_time,
+        "month_change_pct": month_change_pct,
+        "prev_month_total": prev_month_total,
+        "wasted_total": wasted_total,
+        "wasted_count": len(wasted_with_price),
+        "wasted_untracked": len([w for w in wasted if not (w["price"] and w["price"] > 0)]),
+        "wasted_items": wasted_with_price[:10],
     })
 
 
@@ -1966,14 +2057,22 @@ async def apply_receipt(request: Request,
         if lname in existing:
             continue
         expires_at = estimate_expiry_date(raw_name)
+        new_id = str(uuid4())
         db.add_list_item(
-            str(uuid4()),
+            new_id,
             pantry["id"],
             raw_name,
             added_by="Receipt",
             quantity=max(1, int(ri.get("quantity") or 1)),
             expires_at=expires_at,
         )
+        # Carry receipt price onto the pantry item so waste can be costed.
+        try:
+            price = float(ri.get("price") or 0)
+            if price > 0:
+                db.update_list_item_price(new_id, price)
+        except (TypeError, ValueError):
+            pass
         existing.add(lname)
         added_to_pantry += 1
 

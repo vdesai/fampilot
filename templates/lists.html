@@ -162,6 +162,17 @@
             <div class="page-title">Lists</div>
         </div>
 
+        <a href="/spending" style="display:flex; align-items:center; justify-content:space-between; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; padding:14px 18px; border-radius:14px; margin-bottom:16px; text-decoration:none; box-shadow:0 3px 12px rgba(102,126,234,0.22);">
+            <div>
+                <div style="font-size:12px; opacity:0.85; font-weight:600; letter-spacing:0.3px;">THIS MONTH</div>
+                <div style="font-size:22px; font-weight:700; letter-spacing:-0.5px;">${{ "%.2f"|format(month_spend_total or 0) }}</div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:11px; opacity:0.85;">{{ month_spend_count }} item{{ '' if month_spend_count == 1 else 's' }}</div>
+                <div style="font-size:13px; font-weight:600; margin-top:4px;">View spending &rsaquo;</div>
+            </div>
+        </a>
+
         <form class="new-list-form" action="/lists/create" method="post">
             <input type="text" name="name" class="new-list-input" placeholder="New list name..." required>
             <button type="submit" class="new-list-btn">+ Create</button>

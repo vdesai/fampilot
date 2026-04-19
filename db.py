@@ -816,6 +816,42 @@ def get_stale_pantry_items(family_id: str, days: int = 14) -> list:
         (family_id, cutoff), fetch='all') or []
 
 
+def get_priced_items(family_id: str, since: Optional[str] = None) -> list:
+    """Return checked list items with prices for spending analysis.
+
+    since: optional ISO date string (YYYY-MM-DD). Filters on li.created_at.
+    """
+    params = [family_id]
+    sql = """SELECT li.id, li.text, li.price, li.quantity, li.created_at,
+                    li.list_id, l.name AS list_name, l.icon AS list_icon
+             FROM list_items li
+             JOIN lists l ON l.id = li.list_id
+             WHERE l.family_id = ? AND li.checked = 1 AND li.price IS NOT NULL AND li.price > 0"""
+    if since:
+        sql += " AND li.created_at >= ?"
+        params.append(since)
+    sql += " ORDER BY li.created_at DESC"
+    return _execute(sql, tuple(params), fetch='all') or []
+
+
+def get_wasted_pantry_items(family_id: str) -> list:
+    """Pantry items past expiry and still unchecked — 'likely wasted'.
+
+    Returns rows with price (may be NULL if item was added manually without price).
+    """
+    today = _local_today().isoformat()
+    return _execute(
+        """SELECT li.id, li.text, li.price, li.quantity, li.expires_at, li.created_at,
+                  l.name AS list_name
+           FROM list_items li
+           JOIN lists l ON l.id = li.list_id
+           WHERE l.family_id = ? AND li.checked = 0
+             AND li.expires_at IS NOT NULL AND li.expires_at < ?
+             AND LOWER(l.name) IN ('pantry', 'inventory', 'home inventory')
+           ORDER BY li.expires_at ASC""",
+        (family_id, today), fetch='all') or []
+
+
 def get_list_summary(family_id: str) -> list:
     return _execute(
         """SELECT l.*,
