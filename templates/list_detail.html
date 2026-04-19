@@ -658,6 +658,10 @@
             if (data.ok) {
                 appendItems(data.added);
                 updateStatus();
+                if (data.duplicates && data.duplicates.length > 0) {
+                    showFeedback(`"${data.duplicates.join('", "')}" already on the list`);
+                    setTimeout(() => showFeedback(''), 3000);
+                }
             }
             addInput.focus();
         }

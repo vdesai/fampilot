@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar – FamPilot</title>
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/static/manifest.json">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            min-height: 100vh;
+        }
+
+        .cal-header {
+            background: white;
+            border-bottom: 1px solid #e8e8e8;
+            padding: 16px;
+        }
+        .cal-header-inner {
+            max-width: 540px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .cal-nav-btn {
+            background: #f0f0f2;
+            border: none;
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .cal-nav-btn:hover { background: #e4e4e8; }
+        .cal-week-label {
+            font-size: 16px;
+            font-weight: 700;
+            color: #333;
+            text-align: center;
+        }
+        .cal-today-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .content {
+            max-width: 540px;
+            margin: 0 auto;
+            padding: 12px 16px 100px;
+        }
+
+        /* Email import card */
+        .email-card {
+            background: white;
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .email-card summary {
+            font-size: 13px;
+            font-weight: 600;
+            color: #667eea;
+            cursor: pointer;
+            list-style: none;
+        }
+        .email-card summary::-webkit-details-marker { display: none; }
+        .email-textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px 12px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            margin: 10px 0 8px;
+        }
+        .email-textarea:focus { outline: none; border-color: #667eea; }
+        .email-btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+        }
+        .email-btn:disabled { opacity: 0.5; }
+        .email-result {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #43a047;
+            font-weight: 500;
+        }
+
+        /* Day cards */
+        .day-card {
+            background: white;
+            border-radius: 14px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+        .day-card.today { border: 2px solid #667eea; }
+        .day-header {
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .day-date {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: #f5f5f7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .today .day-date { background: #667eea; }
+        .day-date-num {
+            font-size: 16px;
+            font-weight: 700;
+            color: #333;
+            line-height: 1;
+        }
+        .today .day-date-num { color: white; }
+        .day-date-day {
+            font-size: 9px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+        }
+        .today .day-date-day { color: rgba(255,255,255,0.8); }
+        .day-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+        }
+        .day-count {
+            margin-left: auto;
+            font-size: 12px;
+            color: #bbb;
+        }
+
+        .day-events { padding: 4px 0; }
+        .event-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+        }
+        .event-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .event-info { flex: 1; min-width: 0; }
+        .event-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .event-meta {
+            font-size: 11px;
+            color: #999;
+        }
+        .event-type {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+        .type-event { background: #e8f5e9; color: #2e7d32; }
+        .type-task { background: #e3f2fd; color: #1565c0; }
+        .type-reminder { background: #fff3e0; color: #e65100; }
+
+        .day-empty {
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #ccc;
+            font-style: italic;
+        }
+
+        .completed-event .event-title {
+            text-decoration: line-through;
+            color: #bbb;
+        }
+    </style>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="cal-header">
+        <div class="cal-header-inner">
+            <a href="/calendar?week={{ week - 1 }}" class="cal-nav-btn">< Prev</a>
+            <div>
+                <div class="cal-week-label">{{ cal.week_label }}</div>
+                {% if week != 0 %}
+                <div style="text-align:center;margin-top:4px;">
+                    <a href="/calendar" class="cal-today-btn">Today</a>
+                </div>
+                {% endif %}
+            </div>
+            <a href="/calendar?week={{ week + 1 }}" class="cal-nav-btn">Next ></a>
+        </div>
+    </div>
+
+    <div class="content">
+        <!-- Email forwarding -->
+        <div class="email-card">
+            <details>
+                <summary>+ Add events from email</summary>
+                <textarea class="email-textarea" id="emailText" placeholder="Paste a school email, newsletter, or event info here..."></textarea>
+                <button class="email-btn" id="emailBtn" onclick="parseEmail()">Extract Events</button>
+                <div class="email-result" id="emailResult"></div>
+            </details>
+        </div>
+
+        <!-- Week days -->
+        {% for day in cal.days %}
+        <div class="day-card {% if day.is_today %}today{% endif %}">
+            <div class="day-header">
+                <div class="day-date">
+                    <span class="day-date-num">{{ day.day_num }}</span>
+                    <span class="day-date-day">{{ day.day_short }}</span>
+                </div>
+                <div class="day-name">{{ day.day_name }}</div>
+                {% if day.items %}
+                <div class="day-count">{{ day.items|length }}</div>
+                {% endif %}
+            </div>
+            {% if day.items %}
+            <div class="day-events">
+                {% for item in day.items %}
+                <a href="/history/{{ item.id }}" style="text-decoration:none;" class="event-row {% if item.completed %}completed-event{% endif %}">
+                    <div class="event-dot" style="background: {{ member_colors.get(item.added_by or '', '#667eea') or '#667eea' }};"></div>
+                    <div class="event-info">
+                        <div class="event-title">{{ item.title or "Untitled" }}</div>
+                        <div class="event-meta">
+                            {% if item.time %}{{ item.time }}{% endif %}
+                            {% if item.location %} · {{ item.location }}{% endif %}
+                        </div>
+                    </div>
+                    <span class="event-type type-{{ item.type or 'event' }}">{{ item.type or "event" }}</span>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="day-empty">No events</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        async function parseEmail() {
+            const text = document.getElementById('emailText').value.trim();
+            if (!text) return;
+            const btn = document.getElementById('emailBtn');
+            const result = document.getElementById('emailResult');
+            btn.textContent = 'Extracting...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/email-to-events', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `email_text=${encodeURIComponent(text)}`,
+                });
+                const data = await res.json();
+                if (data.ok && data.count > 0) {
+                    result.textContent = `Added ${data.count} events! Refreshing...`;
+                    result.style.color = '#43a047';
+                    setTimeout(() => location.reload(), 1500);
+                } else if (data.ok) {
+                    result.textContent = 'No events found in this text.';
+                    result.style.color = '#e65100';
+                } else if (data.error && data.error.includes('verloaded')) {
+                    result.textContent = 'AI is busy. Please try again in a moment.';
+                    result.style.color = '#e65100';
+                } else {
+                    result.textContent = data.error || 'Failed to parse email.';
+                    result.style.color = '#e65100';
+                }
+            } catch (e) {
+                result.textContent = 'Failed. Please try again.';
+                result.style.color = '#e65100';
+            }
+            btn.textContent = 'Extract Events';
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>

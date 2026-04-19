@@ -430,6 +430,79 @@ def get_family_week(family_id: str) -> list:
     )
 
 
+def get_calendar_week(family_id: str, week_offset: int = 0) -> dict:
+    """Get a full week of events grouped by date, for the calendar view."""
+    today = _local_today()
+    # Start from Monday of the target week
+    start = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
+    end = start + timedelta(days=6)
+
+    rows = _execute(
+        """SELECT * FROM items
+           WHERE family_id = ? AND start_date BETWEEN ? AND ?
+           ORDER BY start_date, time""",
+        (family_id, start.isoformat(), end.isoformat()), fetch='all',
+    ) or []
+
+    # Group by date
+    days = {}
+    for i in range(7):
+        d = (start + timedelta(days=i))
+        days[d.isoformat()] = {
+            "date": d.isoformat(),
+            "day_name": d.strftime("%A"),
+            "day_short": d.strftime("%a"),
+            "day_num": d.day,
+            "month_short": d.strftime("%b"),
+            "is_today": d == today,
+            "items": [],
+        }
+
+    for row in rows:
+        sd = row["start_date"]
+        if sd in days:
+            days[sd]["items"].append(dict(row))
+
+    return {
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "week_label": f"{start.strftime('%b %d')} – {end.strftime('%b %d, %Y')}",
+        "days": list(days.values()),
+    }
+
+
+def search_family(family_id: str, query: str) -> dict:
+    """Search across items, lists, list_items, and chores."""
+    q = f"%{query}%"
+    results = {"events": [], "list_items": [], "chores": []}
+
+    # Search items (events/tasks/reminders)
+    rows = _execute(
+        """SELECT * FROM items WHERE family_id = ? AND
+           (title LIKE ? OR notes LIKE ? OR location LIKE ?)
+           ORDER BY created_at DESC LIMIT 20""",
+        (family_id, q, q, q), fetch='all') or []
+    results["events"] = [dict(r) for r in rows]
+
+    # Search list items
+    rows = _execute(
+        """SELECT li.*, l.name as list_name, l.icon as list_icon FROM list_items li
+           JOIN lists l ON l.id = li.list_id
+           WHERE l.family_id = ? AND (li.text LIKE ? OR li.note LIKE ?)
+           ORDER BY li.created_at DESC LIMIT 20""",
+        (family_id, q, q), fetch='all') or []
+    results["list_items"] = [dict(r) for r in rows]
+
+    # Search chores
+    rows = _execute(
+        """SELECT * FROM chores WHERE family_id = ? AND title LIKE ?
+           ORDER BY created_at DESC LIMIT 10""",
+        (family_id, q), fetch='all') or []
+    results["chores"] = [dict(r) for r in rows]
+
+    return results
+
+
 def save_item(item_id: str, result: dict,
               source_text: Optional[str] = None,
               image_path: Optional[str] = None,

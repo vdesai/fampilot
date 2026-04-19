@@ -1049,6 +1049,88 @@ async def regenerate_family_link(request: Request):
     return RedirectResponse(url="/", status_code=303)
 
 
+# ── Calendar View ──
+
+MEMBER_COLORS = ["#667eea", "#e91e63", "#43a047", "#ff9800", "#9c27b0", "#00bcd4", "#795548", "#607d8b"]
+
+@app.get("/calendar", response_class=HTMLResponse)
+async def calendar_page(request: Request, week: int = 0):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+    family_id = auth["family_id"]
+    cal = db.get_calendar_week(family_id, week_offset=week)
+    members = db.get_family_members(family_id)
+    member_colors = {m["display_name"]: MEMBER_COLORS[i % len(MEMBER_COLORS)]
+                     for i, m in enumerate(members)}
+    return templates.TemplateResponse(request, "calendar.html", {
+        "request": request,
+        "cal": cal,
+        "week": week,
+        "member_colors": member_colors,
+        "nav_page": "calendar",
+        "auth": auth,
+    })
+
+
+# ── Email Forwarding → Events ──
+
+@app.post("/api/email-to-events")
+async def email_to_events(request: Request, email_text: str = Form(...)):
+    """Parse an email body and extract all events/dates."""
+    auth = _require_auth(request)
+    if not auth:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return JSONResponse({"error": "API key not configured"}, status_code=500)
+
+    family_id = auth["family_id"]
+    try:
+        result = classify_and_extract_multi(email_text, api_key)
+        items_saved = []
+        for flat in result.get("items", []):
+            item_id = str(uuid4())
+            db.save_flat_item(
+                item_id, flat,
+                source_text=email_text,
+                group_id=result.get("group_id"),
+                group_title=result.get("group_title"),
+                group_summary=result.get("group_summary"),
+                family_id=family_id,
+            )
+            items_saved.append({"id": item_id, "title": flat.get("title"), "date": flat.get("start_date"), "type": flat.get("type")})
+        db.log_activity(family_id, auth["display_name"],
+                        f"added {len(items_saved)} events from email", "email_import")
+        return JSONResponse({
+            "ok": True,
+            "count": len(items_saved),
+            "items": items_saved,
+            "group_title": result.get("group_title"),
+        })
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ── Global Search ──
+
+@app.get("/search", response_class=HTMLResponse)
+async def search_page(request: Request, q: str = ""):
+    auth = _require_auth(request)
+    if not auth:
+        return RedirectResponse(url="/welcome", status_code=303)
+    results = None
+    if q.strip():
+        results = db.search_family(auth["family_id"], q.strip())
+    return templates.TemplateResponse(request, "search.html", {
+        "request": request,
+        "query": q,
+        "results": results,
+        "nav_page": "home",
+        "auth": auth,
+    })
+
+
 @app.get("/history", response_class=HTMLResponse)
 async def history_page(request: Request):
     auth = _require_auth(request)
@@ -1229,10 +1311,13 @@ async def add_to_list(request: Request, list_id: str, text: str = Form(...)):
     lst = db.get_list(list_id)
     if not lst or lst["family_id"] != auth["family_id"]:
         return JSONResponse({"error": "not found"}, status_code=404)
+    # Build set of existing items for duplicate detection
+    existing_items = {i["text"].lower().strip() for i in db.get_list_items(list_id) if not i["checked"]}
     # Support adding multiple items separated by newlines
     # Parse optional quantity: "tomatoes x3", "tomatoes (3)", "3 tomatoes"
     qty_pattern = re.compile(r'^(.+?)\s*[x×]\s*(\d+)$|^(.+?)\s*\((\d+)\)$|^(\d+)\s+(.+)$', re.IGNORECASE)
     added = []
+    duplicates = []
     for line in text.strip().split("\n"):
         line = line.strip()
         if not line:
@@ -1247,9 +1332,13 @@ async def add_to_list(request: Request, list_id: str, text: str = Form(...)):
                 item_text, qty = m.group(3).strip(), int(m.group(4))
             elif m.group(5) and m.group(6):  # "3 tomatoes"
                 item_text, qty = m.group(6).strip(), int(m.group(5))
+        if item_text.lower().strip() in existing_items:
+            duplicates.append(item_text)
+            continue
         item_id = str(uuid4())
         db.add_list_item(item_id, list_id, item_text, added_by=auth["display_name"], quantity=qty)
         added.append({"id": item_id, "text": item_text, "quantity": qty})
+        existing_items.add(item_text.lower().strip())
     if added:
         items_text = ", ".join(a["text"] for a in added[:3])
         if len(added) > 3:
@@ -1265,7 +1354,7 @@ async def add_to_list(request: Request, list_id: str, text: str = Form(...)):
         )
     # If request is AJAX, return JSON; otherwise redirect
     if request.headers.get("accept", "").startswith("application/json"):
-        return JSONResponse({"ok": True, "added": added})
+        return JSONResponse({"ok": True, "added": added, "duplicates": duplicates})
     return RedirectResponse(url=f"/lists/{list_id}", status_code=303)
 
 
