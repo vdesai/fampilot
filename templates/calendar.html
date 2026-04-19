@@ -253,13 +253,13 @@
                     <span class="day-date-day">{{ day.day_short }}</span>
                 </div>
                 <div class="day-name">{{ day.day_name }}</div>
-                {% if day.items %}
-                <div class="day-count">{{ day.items|length }}</div>
+                {% if day.events %}
+                <div class="day-count">{{ day.events|length }}</div>
                 {% endif %}
             </div>
-            {% if day.items %}
+            {% if day.events %}
             <div class="day-events">
-                {% for item in day.items %}
+                {% for item in day.events %}
                 <a href="/history/{{ item.id }}" style="text-decoration:none;" class="event-row {% if item.completed|default(false) %}completed-event{% endif %}">
                     <div class="event-dot" style="background: #667eea;"></div>
                     <div class="event-info">

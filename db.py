@@ -455,13 +455,13 @@ def get_calendar_week(family_id: str, week_offset: int = 0) -> dict:
             "day_num": d.day,
             "month_short": d.strftime("%b"),
             "is_today": d == today,
-            "items": [],
+            "events": [],
         }
 
     for row in rows:
         sd = row["start_date"]
         if sd in days:
-            days[sd]["items"].append(dict(row))
+            days[sd]["events"].append(dict(row))
 
     return {
         "start": start.isoformat(),
