@@ -575,6 +575,16 @@ async def home(request: Request):
 
     smart_summary = f"{greeting}, {auth['display_name']}. " + " ".join(summary_parts)
 
+    # Compact spending summary for the home card
+    month_start = date.today().replace(day=1).isoformat()
+    month_priced = db.get_priced_items(family_id, since=month_start)
+    month_spend_total = sum((i["price"] or 0) * (i["quantity"] or 1) for i in month_priced)
+    wasted_rows = db.get_wasted_pantry_items(family_id)
+    wasted_total = sum(
+        float(w["price"] or 0) * int(w["quantity"] or 1)
+        for w in wasted_rows if w["price"] and w["price"] > 0
+    )
+
     return templates.TemplateResponse(request, "index.html", {
         "request":             request,
         "nav_page":            "home",
@@ -593,6 +603,8 @@ async def home(request: Request):
         "recent_activity":     db.get_recent_activity(family_id, limit=10),
         "smart_summary":       smart_summary,
         "suggestions":         db.get_pattern_suggestions(family_id),
+        "month_spend_total":   month_spend_total,
+        "month_wasted_total":  wasted_total,
     })
 
 

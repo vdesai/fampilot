@@ -821,30 +821,7 @@
         </div>
         {% endif %}
 
-        <!-- Feature links — equal height grid -->
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
-            <a href="/whats-for-dinner" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; background:linear-gradient(135deg, #ff9800 0%, #ff5722 100%); border-radius:14px; padding:16px 12px; text-decoration:none; box-shadow:0 3px 12px rgba(255,87,34,0.2); transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
-                <div style="font-size:13px; font-weight:700; color:white;">What's for Dinner?</div>
-                <div style="font-size:10px; color:rgba(255,255,255,0.8);">AI meals from your pantry</div>
-            </a>
-            <a href="/spending" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius:14px; padding:16px 12px; text-decoration:none; box-shadow:0 3px 12px rgba(102,126,234,0.22); transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                <div style="font-size:13px; font-weight:700; color:white;">Spending</div>
-                <div style="font-size:10px; color:rgba(255,255,255,0.85);">Groceries + waste</div>
-            </a>
-            <a href="/ask" style="grid-column: 1 / -1; display:flex; flex-direction:row; align-items:center; justify-content:center; gap:10px; background:white; border-radius:14px; padding:14px 16px; text-decoration:none; box-shadow:0 1px 4px rgba(0,0,0,0.06); border:1.5px solid #e8eeff; transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center; flex-shrink:0;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                </div>
-                <div style="text-align:left;">
-                    <div style="font-size:14px; font-weight:700; color:#333;">Ask FamPilot</div>
-                    <div style="font-size:11px; color:#999;">Chat with your family's data</div>
-                </div>
-            </a>
-        </div>
-
-        <!-- Today / Coming Up card -->
+        <!-- Today / Coming Up — primary daily decisions, surfaced first -->
         {% if risk_items or briefing or later_items %}
         <div class="card" style="border-radius:20px; overflow:hidden; margin-bottom:12px;">
             {% if risk_items %}
@@ -899,6 +876,49 @@
             {% endif %}
         </div>
         {% endif %}
+
+        <!-- What's for Dinner? — hero tile, the marquee daily decision -->
+        <a href="/whats-for-dinner" style="display:flex; align-items:center; gap:14px; background:linear-gradient(135deg, #ff9800 0%, #ff5722 100%); border-radius:18px; padding:18px 20px; margin-bottom:10px; text-decoration:none; box-shadow:0 4px 14px rgba(255,87,34,0.22); transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+            <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3v7"/></svg>
+            </div>
+            <div style="flex:1;">
+                <div style="font-size:17px; font-weight:700; color:white;">What's for Dinner?</div>
+                <div style="font-size:12px; color:rgba(255,255,255,0.88); margin-top:2px;">AI picks meals using what's in your pantry</div>
+            </div>
+            <span style="color:rgba(255,255,255,0.8); font-size:20px;">›</span>
+        </a>
+
+        <!-- Ask FamPilot — compact utility -->
+        <a href="/ask" style="display:flex; align-items:center; gap:12px; background:white; border-radius:14px; padding:14px 16px; margin-bottom:10px; text-decoration:none; box-shadow:0 1px 4px rgba(0,0,0,0.06); border:1.5px solid #e8eeff; transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center; flex-shrink:0;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div style="flex:1;">
+                <div style="font-size:14px; font-weight:700; color:#333;">Ask FamPilot</div>
+                <div style="font-size:11px; color:#999;">Chat with your family's data</div>
+            </div>
+            <span style="color:#ccc; font-size:18px;">›</span>
+        </a>
+
+        <!-- Spending — compact reflection card, always shown, subtle when empty -->
+        <a href="/spending" style="display:flex; align-items:center; gap:12px; background:white; border-radius:14px; padding:12px 16px; margin-bottom:12px; text-decoration:none; box-shadow:0 1px 3px rgba(0,0,0,0.05); border:1px solid #eef0f7; transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+            <span style="font-size:18px; flex-shrink:0;">💰</span>
+            <div style="flex:1; min-width:0;">
+                <div style="font-size:12px; font-weight:700; color:#999; text-transform:uppercase; letter-spacing:0.3px;">This month</div>
+                <div style="font-size:14px; color:#333; margin-top:1px;">
+                    {% if month_spend_total and month_spend_total > 0 %}
+                        <strong>${{ "%.2f"|format(month_spend_total) }}</strong>
+                        {% if month_wasted_total and month_wasted_total > 0 %}
+                            · <span style="color:#c62828;">${{ "%.2f"|format(month_wasted_total) }} wasted</span>
+                        {% endif %}
+                    {% else %}
+                        <span style="color:#aaa;">Scan a receipt to start tracking</span>
+                    {% endif %}
+                </div>
+            </div>
+            <span style="color:#ccc; font-size:18px;">›</span>
+        </a>
 
         <!-- Hidden upload form (triggered by Scan button) -->
         <div id="scanFormWrap" style="display:none;">
