@@ -260,8 +260,8 @@
             {% if day.items %}
             <div class="day-events">
                 {% for item in day.items %}
-                <a href="/history/{{ item.id }}" style="text-decoration:none;" class="event-row {% if item.completed %}completed-event{% endif %}">
-                    <div class="event-dot" style="background: {{ member_colors.get(item.added_by or '', '#667eea') or '#667eea' }};"></div>
+                <a href="/history/{{ item.id }}" style="text-decoration:none;" class="event-row {% if item.completed|default(false) %}completed-event{% endif %}">
+                    <div class="event-dot" style="background: #667eea;"></div>
                     <div class="event-info">
                         <div class="event-title">{{ item.title or "Untitled" }}</div>
                         <div class="event-meta">
