@@ -430,19 +430,105 @@ def classify_and_extract_from_image(image_path: str, api_key: str) -> Dict:
 # AI EVENT EXTRACTION (legacy — kept for Google Calendar integration)
 # ============================================================================
 
-def suggest_meals_from_pantry(pantry_items: list[str], preferences: str, api_key: str) -> dict:
+# ── Shelf-life estimation ──
+#
+# Coarse keyword-based estimator. Returns days from today an item is expected
+# to stay good. Default is 90 days (pantry) — over-estimating beats nagging.
+
+_SHELF_LIFE_KEYWORDS: list[tuple[tuple[str, ...], int]] = [
+    # Very fresh (3 days)
+    (("strawberry", "strawberries", "raspberry", "raspberries", "blackberry",
+      "blackberries", "lettuce", "spinach", "arugula", "cilantro", "basil",
+      "parsley", "mushroom", "asparagus", "fish", "salmon", "tilapia", "shrimp"), 3),
+    # Fresh (7 days)
+    (("milk", "bread", "cheese", "yogurt", "cream", "butter", "tomato", "cucumber",
+      "pepper", "avocado", "banana", "grape", "broccoli", "cauliflower", "celery",
+      "kale", "chicken", "turkey", "beef", "pork", "bacon", "ham", "sausage",
+      "eggs", "egg ", "tortilla"), 7),
+    # Short-ish (14 days)
+    (("apple", "orange", "lemon", "lime", "carrot", "cabbage", "zucchini",
+      "squash", "beet", "radish", "corn", "deli", "hummus"), 14),
+    # Long (60 days)
+    (("potato", "onion", "garlic", "ginger", "shallot", "sweet potato", "yam",
+      "winter squash", "pumpkin"), 60),
+    # Frozen (180 days)
+    (("frozen", "ice cream"), 180),
+    # Very long pantry (365 days)
+    (("flour", "sugar", "salt", "pepper", "rice", "pasta", "noodle", "oat",
+      "cereal", "canned", "can of", "beans", "lentil", "chickpea", "oil",
+      "vinegar", "soy sauce", "ketchup", "mustard", "mayo", "honey", "jam",
+      "peanut butter", "coffee", "tea", "spice"), 365),
+]
+
+
+def estimate_shelf_life_days(item_name: str) -> int:
+    """Return estimated days-until-expiry for a pantry item based on its name.
+
+    Coarse heuristic — matches known keywords, defaults to 90 (generic pantry).
+    """
+    name = (item_name or "").lower()
+    if not name:
+        return 90
+    for keywords, days in _SHELF_LIFE_KEYWORDS:
+        for kw in keywords:
+            if kw in name:
+                return days
+    return 90
+
+
+def estimate_expiry_date(item_name: str, from_date: Optional[datetime] = None) -> str:
+    """ISO date string (YYYY-MM-DD) for when the item is expected to expire."""
+    base = (from_date or datetime.now()).date()
+    days = estimate_shelf_life_days(item_name)
+    return (base + timedelta(days=days)).isoformat()
+
+
+def suggest_meals_from_pantry(pantry_items, preferences: str, api_key: str) -> dict:
     """
     Suggest meals based on pantry inventory.
 
+    Args:
+        pantry_items: Either a list of name strings, or a list of dicts
+            {"name": str, "days_left": int | None}. When days_left is provided,
+            meals that use expiring items are prioritized.
+
     Returns:
         {"meals": [{"name": str, "description": str, "ingredients": [str],
-                     "have": [str], "missing": [str], "cook_time": str}]}
+                     "have": [str], "missing": [str], "cook_time": str,
+                     "uses_expiring": [str]}]}
     """
-    items_str = ", ".join(pantry_items) if pantry_items else "nothing specific"
+    # Normalize to a list of dicts with name + days_left
+    normalized = []
+    for entry in pantry_items or []:
+        if isinstance(entry, str):
+            normalized.append({"name": entry, "days_left": None})
+        elif isinstance(entry, dict) and entry.get("name"):
+            normalized.append({"name": entry["name"], "days_left": entry.get("days_left")})
+
+    expiring = [e for e in normalized if e["days_left"] is not None and e["days_left"] <= 7]
+    expiring.sort(key=lambda e: e["days_left"])
+
+    if normalized:
+        lines = []
+        for e in normalized:
+            if e["days_left"] is not None and e["days_left"] <= 7:
+                lines.append(f"- {e['name']} (expires in {e['days_left']} day{'s' if e['days_left'] != 1 else ''})")
+            else:
+                lines.append(f"- {e['name']}")
+        items_str = "\n".join(lines)
+    else:
+        items_str = "nothing specific"
+
+    expiring_hint = ""
+    if expiring:
+        names = ", ".join(e["name"] for e in expiring)
+        expiring_hint = f"\nPRIORITIZE recipes that use these items expiring soon: {names}"
+
     prompt = f"""You are a family meal assistant. Based on what's in the pantry, suggest 3 meals.
 
-Pantry items available: {items_str}
-{f'Preferences: {preferences}' if preferences else ''}
+Pantry items available:
+{items_str}
+{f'Preferences: {preferences}' if preferences else ''}{expiring_hint}
 
 Assume basic staples are available (salt, pepper, oil, butter, common spices).
 
@@ -455,12 +541,14 @@ Return JSON:
       "cook_time": "e.g. 25 min",
       "ingredients": ["all ingredients needed"],
       "have": ["ingredients from pantry that are available"],
-      "missing": ["ingredients NOT in pantry that need to be bought"]
+      "missing": ["ingredients NOT in pantry that need to be bought"],
+      "uses_expiring": ["items from the expiring list this meal uses, or [] if none"]
     }}
   ]
 }}
 
-Prioritize meals that use MOSTLY what's already available. Sort by fewest missing items first.
+Prioritize meals that use MOSTLY what's already available AND that use expiring items first.
+Sort by: (1) number of expiring items used, then (2) fewest missing items.
 Keep it practical — family-friendly, not restaurant-fancy."""
 
     client = Anthropic(api_key=api_key)

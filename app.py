@@ -9,7 +9,7 @@ import os
 import json
 import re
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, date, timedelta, timezone
 from pathlib import Path
 from typing import Optional, Dict, Tuple
 from urllib.parse import quote
@@ -33,6 +33,7 @@ from main import (
     suggest_meals_from_pantry,
     suggest_meals_from_photo,
     extract_receipt_items,
+    estimate_expiry_date,
     answer_family_question,
     authenticate_google_calendar,
     create_calendar_event,
@@ -1282,11 +1283,25 @@ async def view_list(request: Request, list_id: str):
     if not lst or lst["family_id"] != auth["family_id"]:
         return RedirectResponse(url="/lists", status_code=303)
     items = db.get_list_items(list_id)
+    is_pantry = lst["name"].lower() in ("pantry", "inventory", "home inventory")
+    if is_pantry:
+        today = date.today()
+        augmented = []
+        for i in items:
+            d = dict(i)
+            exp = d.get("expires_at")
+            d["days_left"] = None
+            if exp:
+                try:
+                    d["days_left"] = (date.fromisoformat(exp) - today).days
+                except Exception:
+                    pass
+            augmented.append(d)
+        items = augmented
     unchecked = [i for i in items if not i["checked"]]
     checked = [i for i in items if i["checked"]]
     spending = db.get_list_spending(list_id)
     members = db.get_family_members(auth["family_id"])
-    is_pantry = lst["name"].lower() in ("pantry", "inventory", "home inventory")
     all_suggestions = db.get_pattern_suggestions(auth["family_id"])
     suggestions = [s for s in all_suggestions if s.get("list_id") == list_id]
     return templates.TemplateResponse(request, "list_detail.html", {
@@ -1313,6 +1328,7 @@ async def add_to_list(request: Request, list_id: str, text: str = Form(...)):
         return JSONResponse({"error": "not found"}, status_code=404)
     # Build set of existing items for duplicate detection
     existing_items = {i["text"].lower().strip() for i in db.get_list_items(list_id) if not i["checked"]}
+    is_pantry_list = lst["name"].lower() in ("pantry", "inventory", "home inventory")
     # Support adding multiple items separated by newlines
     # Parse optional quantity: "tomatoes x3", "tomatoes (3)", "3 tomatoes"
     qty_pattern = re.compile(r'^(.+?)\s*[x×]\s*(\d+)$|^(.+?)\s*\((\d+)\)$|^(\d+)\s+(.+)$', re.IGNORECASE)
@@ -1336,7 +1352,8 @@ async def add_to_list(request: Request, list_id: str, text: str = Form(...)):
             duplicates.append(item_text)
             continue
         item_id = str(uuid4())
-        db.add_list_item(item_id, list_id, item_text, added_by=auth["display_name"], quantity=qty)
+        expires_at = estimate_expiry_date(item_text) if is_pantry_list else None
+        db.add_list_item(item_id, list_id, item_text, added_by=auth["display_name"], quantity=qty, expires_at=expires_at)
         added.append({"id": item_id, "text": item_text, "quantity": qty})
         existing_items.add(item_text.lower().strip())
     if added:
@@ -1735,14 +1752,35 @@ async def suggest_meals(request: Request):
         return JSONResponse({"error": "API key not configured"}, status_code=500)
 
     pantry_rows = db.get_pantry_items(family_id)
-    pantry_items = [r["text"] for r in pantry_rows]
+    today = date.today()
+    pantry_with_expiry = []
+    for r in pantry_rows:
+        days_left = None
+        exp = r.get("expires_at") if isinstance(r, dict) else r["expires_at"]
+        if exp:
+            try:
+                days_left = (date.fromisoformat(exp) - today).days
+            except Exception:
+                days_left = None
+        pantry_with_expiry.append({"name": r["text"], "days_left": days_left})
+    pantry_items = [e["name"] for e in pantry_with_expiry]
 
     form = await request.form()
     preferences = form.get("preferences", "")
 
     try:
-        result = suggest_meals_from_pantry(pantry_items, preferences, api_key)
-        return JSONResponse({"ok": True, **result, "pantry_items": pantry_items})
+        result = suggest_meals_from_pantry(pantry_with_expiry, preferences, api_key)
+        expiring_soon = [
+            {"name": e["name"], "days_left": e["days_left"]}
+            for e in pantry_with_expiry
+            if e["days_left"] is not None and e["days_left"] <= 7
+        ]
+        expiring_soon.sort(key=lambda e: e["days_left"])
+        return JSONResponse({
+            "ok": True, **result,
+            "pantry_items": pantry_items,
+            "expiring_soon": expiring_soon,
+        })
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -1788,7 +1826,11 @@ async def suggest_meals_photo(request: Request, file: UploadFile = File(...)):
             added_to_pantry = 0
             for item_text in identified:
                 if item_text.lower().strip() not in existing:
-                    db.add_list_item(str(uuid4()), pantry["id"], item_text, added_by="Fridge Scan")
+                    db.add_list_item(
+                        str(uuid4()), pantry["id"], item_text,
+                        added_by="Fridge Scan",
+                        expires_at=estimate_expiry_date(item_text),
+                    )
                     added_to_pantry += 1
             result["added_to_pantry"] = added_to_pantry
         return JSONResponse({"ok": True, **result})
@@ -1860,7 +1902,7 @@ async def scan_receipt(request: Request, file: UploadFile = File(...)):
 async def apply_receipt(request: Request,
                          list_id: str = Form(""),
                          items_json: str = Form("[]")):
-    """Match receipt items to a list, check them off and set prices."""
+    """Match receipt items to a list, check them off, set prices, stock pantry."""
     auth = _require_auth(request)
     if not auth:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
@@ -1898,11 +1940,49 @@ async def apply_receipt(request: Request,
             else:
                 unmatched.append(ri)
 
+    # Stock the Pantry with everything from the receipt (matched + unmatched),
+    # with coarse-estimated expiry dates. Skip non-food line items.
+    added_to_pantry = 0
+    pantry = None
+    for l in db.get_lists(family_id):
+        if l["name"].lower() in ("pantry", "inventory", "home inventory"):
+            pantry = l
+            break
+    if pantry is None:
+        pantry_id = str(uuid4())
+        db.create_list(pantry_id, family_id, "Pantry", icon="🏠")
+        pantry = {"id": pantry_id}
+
+    existing = {li["text"].lower().strip() for li in db.get_list_items(pantry["id"]) if not li["checked"]}
+    SKIP_TOKENS = ("tax", "subtotal", "total", "discount", "coupon", "savings", "fee", "tip")
+
+    for ri in receipt_items:
+        raw_name = (ri.get("name") or "").strip()
+        if not raw_name:
+            continue
+        lname = raw_name.lower()
+        if any(tok in lname for tok in SKIP_TOKENS):
+            continue
+        if lname in existing:
+            continue
+        expires_at = estimate_expiry_date(raw_name)
+        db.add_list_item(
+            str(uuid4()),
+            pantry["id"],
+            raw_name,
+            added_by="Receipt",
+            quantity=max(1, int(ri.get("quantity") or 1)),
+            expires_at=expires_at,
+        )
+        existing.add(lname)
+        added_to_pantry += 1
+
     return JSONResponse({
         "ok": True,
         "matched": matched,
         "unmatched": unmatched,
         "list_id": list_id,
+        "added_to_pantry": added_to_pantry,
     })
 
 

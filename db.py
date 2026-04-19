@@ -263,6 +263,7 @@ def init_db() -> None:
         ("note", "TEXT"),
         ("assigned_to", "TEXT"),
         ("price", "REAL"),
+        ("expires_at", "TEXT"),
     ]:
         try:
             _execute(f"ALTER TABLE list_items ADD COLUMN {col} {definition}")
@@ -733,14 +734,18 @@ def delete_list(list_id: str) -> None:
     _execute("DELETE FROM lists WHERE id=?", (list_id,))
 
 
-def add_list_item(item_id: str, list_id: str, text: str, added_by: str = "", quantity: int = 1) -> None:
+def add_list_item(item_id: str, list_id: str, text: str, added_by: str = "", quantity: int = 1, expires_at: Optional[str] = None) -> None:
     row = _execute(
         "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM list_items WHERE list_id=?",
         (list_id,), fetch='one')
     sort_order = row["next_order"] if row else 0
     _execute(
-        "INSERT INTO list_items (id, list_id, text, added_by, created_at, sort_order, quantity) VALUES (?,?,?,?,?,?,?)",
-        (item_id, list_id, text, added_by, datetime.now(timezone.utc).isoformat(), sort_order, max(1, quantity)))
+        "INSERT INTO list_items (id, list_id, text, added_by, created_at, sort_order, quantity, expires_at) VALUES (?,?,?,?,?,?,?,?)",
+        (item_id, list_id, text, added_by, datetime.now(timezone.utc).isoformat(), sort_order, max(1, quantity), expires_at))
+
+
+def update_list_item_expiry(item_id: str, expires_at: Optional[str]) -> None:
+    _execute("UPDATE list_items SET expires_at=? WHERE id=?", (expires_at, item_id))
 
 
 def update_list_item_quantity(item_id: str, quantity: int) -> None:
@@ -789,9 +794,9 @@ def clear_checked_items(list_id: str) -> None:
 
 
 def get_pantry_items(family_id: str) -> list:
-    """Get unchecked items from Pantry/Inventory lists for smart deduction."""
+    """Get unchecked items from Pantry/Inventory lists with expiry metadata."""
     return _execute(
-        """SELECT li.text FROM list_items li
+        """SELECT li.id, li.text, li.expires_at, li.created_at FROM list_items li
            JOIN lists l ON l.id = li.list_id
            WHERE l.family_id = ? AND li.checked = 0
              AND LOWER(l.name) IN ('pantry', 'inventory', 'home inventory')""",

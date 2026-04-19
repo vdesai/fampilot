@@ -175,6 +175,36 @@
             font-size: 12px; color: #2e7d32; font-weight: 500;
         }
 
+        .expiring-banner {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border-left: 4px solid #ef6c00;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #5d4037;
+        }
+        .expiring-banner strong { color: #c62828; }
+        .expiring-banner-chips {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+        }
+        .expiring-banner-chip {
+            padding: 3px 8px; background: white; border: 1px solid #ffab91;
+            border-radius: 10px; font-size: 11px; color: #c62828; font-weight: 600;
+        }
+        .uses-expiring-badge {
+            display: inline-block;
+            background: #fff3e0;
+            color: #c62828;
+            border: 1px solid #ffab91;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
         /* Meal card */
         .meal-card {
             background: white;
@@ -297,6 +327,7 @@
         <!-- Results -->
         <div class="results" id="results">
             <div id="pantryInfo"></div>
+            <div id="expiringSoonSection"></div>
             <div id="identifiedSection"></div>
             <div id="mealCards"></div>
         </div>
@@ -436,6 +467,28 @@
                 pantryInfo.innerHTML = '';
             }
 
+            // Expiring-soon banner
+            const expiringSection = document.getElementById('expiringSoonSection');
+            const expiring = data.expiring_soon || [];
+            if (expiring.length > 0) {
+                const chips = expiring.map(e => {
+                    const label = e.days_left < 0
+                        ? 'expired'
+                        : e.days_left === 0
+                            ? 'today'
+                            : `${e.days_left}d`;
+                    return `<span class="expiring-banner-chip">${escapeHtml(e.name)} · ${label}</span>`;
+                }).join('');
+                expiringSection.innerHTML = `
+                    <div class="expiring-banner">
+                        <strong>${expiring.length} item${expiring.length === 1 ? '' : 's'} expiring soon.</strong>
+                        Suggestions below prioritize using them up.
+                        <div class="expiring-banner-chips">${chips}</div>
+                    </div>`;
+            } else {
+                expiringSection.innerHTML = '';
+            }
+
             // Identified items (from photo)
             const identifiedSection = document.getElementById('identifiedSection');
             if (data.identified && data.identified.length > 0) {
@@ -472,10 +525,15 @@
                 const missingCount = (meal.missing || []).length;
                 const missingJson = JSON.stringify(meal.missing || []).replace(/'/g, "\\'");
 
+                const usesExpiring = (meal.uses_expiring || []).filter(Boolean);
+                const expiringBadge = usesExpiring.length > 0
+                    ? `<span class="uses-expiring-badge" title="${escapeHtml(usesExpiring.join(', '))}">⏳ uses ${usesExpiring.length} expiring</span>`
+                    : '';
+
                 return `
                 <div class="meal-card">
                     <div class="meal-header">
-                        <div class="meal-name">${escapeHtml(meal.name)}</div>
+                        <div class="meal-name">${escapeHtml(meal.name)}${expiringBadge}</div>
                         <div class="meal-desc">${escapeHtml(meal.description || '')}</div>
                         <div class="meal-meta">
                             ${meal.cook_time ? `<span>&#9201; ${escapeHtml(meal.cook_time)}</span>` : ''}
