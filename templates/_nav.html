@@ -1,56 +1,98 @@
 <style>
-.top-nav-wrap {
+/* ── Top Bar ── */
+.top-bar {
     background: white;
-    border-bottom: 1px solid #e8e8e8;
+    border-bottom: 1px solid #f0f0f0;
     position: sticky;
     top: 0;
     z-index: 100;
+    padding: 10px 16px;
 }
-.top-nav {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    max-width: 760px;
+.top-bar-inner {
+    max-width: 540px;
     margin: 0 auto;
-    padding: 8px 12px;
-    gap: 6px;
-}
-.nav-links { display: flex; gap: 6px; width: 100%; justify-content: center; }
-.nav-link {
-    color: #666;
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 8px 14px;
-    border: none;
-    border-radius: 10px;
-    background: #f0f0f2;
-    transition: all 0.15s;
-    white-space: nowrap;
     display: flex;
     align-items: center;
-    gap: 4px;
-    flex: 1;
+    justify-content: space-between;
+}
+.top-brand {
+    font-size: 20px;
+    font-weight: 800;
+    color: #667eea;
+    text-decoration: none;
+    letter-spacing: -0.5px;
+}
+.top-search {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #f5f5f7;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+.top-search:hover { background: #e8e8ea; }
+
+/* ── Bottom Tab Bar ── */
+.bottom-tabs {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #f0f0f0;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+.bottom-tabs-inner {
+    max-width: 540px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-around;
+    padding: 6px 0 4px;
+}
+.tab-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-decoration: none;
+    padding: 4px 8px;
+    min-width: 56px;
+    transition: color 0.15s;
+}
+.tab-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
     justify-content: center;
 }
-.nav-link:hover {
-    background: #e4e4e8;
-    color: #333;
+.tab-icon svg {
+    stroke: #999;
+    transition: stroke 0.15s;
 }
-.nav-link.nav-active {
-    background: #667eea;
-    border: none;
-    color: white;
+.tab-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #999;
+    transition: color 0.15s;
 }
-@media (max-width: 400px) {
-    .nav-link { padding: 6px 8px; font-size: 11px; gap: 2px; }
-}
+.tab-link.tab-active .tab-icon svg { stroke: #667eea; }
+.tab-link.tab-active .tab-label { color: #667eea; }
+
+/* Hide old nav-link stuff */
+.nav-link, .nav-links, .top-nav-wrap, .top-nav { display: none !important; }
 
 /* ── Global Voice FAB ── */
 .gv-fab {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    bottom: 80px;
+    right: 20px;
     width: 64px;
     height: 64px;
     border-radius: 50%;
@@ -171,18 +213,41 @@
 }
 </style>
 
-<div class="top-nav-wrap">
-    <nav class="top-nav">
-        <div class="nav-links">
-            <a href="/" class="nav-link" style="font-weight:800; letter-spacing:-0.3px; border:none; padding:7px 8px; flex:none; color:#667eea;">FamPilot</a>
-            <a href="/lists" class="nav-link {% if nav_page == 'lists' %}nav-active{% endif %}">🛒 Lists</a>
-            <a href="/chores" class="nav-link {% if nav_page == 'chores' %}nav-active{% endif %}">🧹 Chores</a>
-            <a href="/meals" class="nav-link {% if nav_page == 'meals' %}nav-active{% endif %}">🍽️ Meals</a>
-            <a href="/calendar" class="nav-link {% if nav_page == 'calendar' %}nav-active{% endif %}">📅 Calendar</a>
-            <a href="/search" class="nav-link {% if nav_page == 'search' %}nav-active{% endif %}" style="flex:none;padding:7px 10px;">🔍</a>
-        </div>
-    </nav>
+<!-- Top Bar -->
+<div class="top-bar">
+    <div class="top-bar-inner">
+        <a href="/" class="top-brand">FamPilot</a>
+        <a href="/search" class="top-search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </a>
+    </div>
 </div>
+
+<!-- Bottom Tab Bar -->
+<nav class="bottom-tabs">
+    <div class="bottom-tabs-inner">
+        <a href="/" class="tab-link {% if nav_page == 'home' %}tab-active{% endif %}">
+            <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
+            <span class="tab-label">Home</span>
+        </a>
+        <a href="/lists" class="tab-link {% if nav_page == 'lists' %}tab-active{% endif %}">
+            <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span>
+            <span class="tab-label">Lists</span>
+        </a>
+        <a href="/calendar" class="tab-link {% if nav_page == 'calendar' %}tab-active{% endif %}">
+            <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+            <span class="tab-label">Calendar</span>
+        </a>
+        <a href="/meals" class="tab-link {% if nav_page == 'meals' %}tab-active{% endif %}">
+            <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3v7"/></svg></span>
+            <span class="tab-label">Meals</span>
+        </a>
+        <a href="/chores" class="tab-link {% if nav_page == 'chores' %}tab-active{% endif %}">
+            <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+            <span class="tab-label">Chores</span>
+        </a>
+    </div>
+</nav>
 
 <!-- Global voice FAB — appears on every page -->
 <button class="gv-fab" id="gvFab" onclick="gvToggle()">🎙️</button>
