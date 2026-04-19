@@ -1118,19 +1118,13 @@ async def email_to_events(request: Request, email_text: str = Form(...)):
 
 @app.get("/search", response_class=HTMLResponse)
 async def search_page(request: Request, q: str = ""):
+    """Legacy: redirect into Ask FamPilot so search and ask share one entry point."""
     auth = _require_auth(request)
     if not auth:
         return RedirectResponse(url="/welcome", status_code=303)
-    results = None
-    if q.strip():
-        results = db.search_family(auth["family_id"], q.strip())
-    return templates.TemplateResponse(request, "search.html", {
-        "request": request,
-        "query": q,
-        "results": results,
-        "nav_page": "home",
-        "auth": auth,
-    })
+    query = (q or "").strip()
+    target = f"/ask?q={quote(query)}" if query else "/ask"
+    return RedirectResponse(url=target, status_code=303)
 
 
 @app.get("/history", response_class=HTMLResponse)
@@ -2088,12 +2082,13 @@ async def apply_receipt(request: Request,
 # ── Family Data Chat ──
 
 @app.get("/ask", response_class=HTMLResponse)
-async def ask_page(request: Request):
+async def ask_page(request: Request, q: str = ""):
     auth = _require_auth(request)
     if not auth:
         return RedirectResponse(url="/welcome", status_code=303)
     return templates.TemplateResponse(request, "ask.html", {
         "request": request, "nav_page": "home", "auth": auth,
+        "prefill_query": q.strip(),
     })
 
 

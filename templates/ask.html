@@ -198,6 +198,13 @@
             if (e.key === 'Enter') { e.preventDefault(); sendQuestion(); }
         });
 
+        // Prefill from ?q= (used when the top search icon passes a query through).
+        {% if prefill_query %}
+        window.addEventListener('DOMContentLoaded', () => {
+            askQuestion({{ prefill_query|tojson }});
+        });
+        {% endif %}
+
         function askQuestion(q) {
             chatInput.value = q;
             sendQuestion();
