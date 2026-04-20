@@ -1043,7 +1043,8 @@
         function startMic() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
-                showFeedback('Speech recognition not supported in this browser');
+                showFeedback('Voice not supported here — try Safari or Chrome directly.');
+                setTimeout(() => showFeedback(''), 4000);
                 return;
             }
 
@@ -1057,11 +1058,15 @@
             isListening = true;
             showFeedback('Listening...');
 
+            let gotResult = false;
+            let errorHandled = false;
+
             recognition.onresult = (e) => {
                 let transcript = '';
                 for (let i = 0; i < e.results.length; i++) {
                     transcript += e.results[i][0].transcript;
                 }
+                if (transcript) gotResult = true;
                 showFeedback(transcript);
 
                 // When final result is ready, process it
@@ -1073,17 +1078,39 @@
             recognition.onend = () => {
                 micBtn.classList.remove('listening');
                 isListening = false;
+                if (!gotResult && !errorHandled) {
+                    showFeedback("Didn't catch that. Tap mic and try again.");
+                    setTimeout(() => showFeedback(''), 4000);
+                }
             };
 
             recognition.onerror = (e) => {
                 micBtn.classList.remove('listening');
                 isListening = false;
-                if (e.error !== 'no-speech') {
-                    showFeedback('Could not hear you. Tap mic and try again.');
+                errorHandled = true;
+                const code = (e && e.error) || '';
+                let msg = 'Could not hear you. Tap mic and try again.';
+                if (code === 'not-allowed' || code === 'service-not-allowed') {
+                    msg = 'Mic blocked — allow access in browser settings.';
+                } else if (code === 'no-speech') {
+                    msg = "Didn't hear anything. Speak a bit louder and retry.";
+                } else if (code === 'audio-capture') {
+                    msg = 'No microphone found on this device.';
+                } else if (code === 'network') {
+                    msg = 'Network error — speech needs a connection.';
                 }
+                showFeedback(msg);
+                setTimeout(() => showFeedback(''), 4000);
             };
 
-            recognition.start();
+            try {
+                recognition.start();
+            } catch (err) {
+                micBtn.classList.remove('listening');
+                isListening = false;
+                showFeedback("Couldn't start mic. Try again.");
+                setTimeout(() => showFeedback(''), 3000);
+            }
         }
 
         function stopMic() {

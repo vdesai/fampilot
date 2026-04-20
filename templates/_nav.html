@@ -271,16 +271,23 @@
     }
 
     let _gvTimeout = null;
+    let _gvGotResult = false;
+    let _gvErrorHandled = false;
 
     function gvStart() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) { alert('Speech not supported. Try Chrome or Safari.'); return; }
+        if (!SR) {
+            gvToast('Voice not supported here', 'Try opening FamPilot in Safari or Chrome directly.');
+            return;
+        }
 
         _gvRec = new SR();
         _gvRec.continuous = false;
         _gvRec.interimResults = true;
         _gvRec.lang = 'en-US';
         _gvOn = true;
+        _gvGotResult = false;
+        _gvErrorHandled = false;
 
         document.getElementById('gvFab').classList.add('gv-listening');
         gvShow('Listening...');
@@ -291,15 +298,50 @@
         _gvRec.onresult = (e) => {
             let t = '';
             for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+            if (t) _gvGotResult = true;
             gvShow(t || 'Listening...');
             if (e.results[e.results.length - 1].isFinal) {
                 clearTimeout(_gvTimeout);
                 gvExec(t.trim());
             }
         };
-        _gvRec.onend = () => { clearTimeout(_gvTimeout); gvCleanup(); };
-        _gvRec.onerror = () => { clearTimeout(_gvTimeout); gvCleanup(); };
-        _gvRec.start();
+        _gvRec.onend = () => {
+            clearTimeout(_gvTimeout);
+            gvCleanup();
+            // If recognition ended without ever producing a transcript and no
+            // error handler already surfaced feedback, tell the user.
+            if (!_gvGotResult && !_gvErrorHandled) {
+                gvToast("Didn't catch that", "Tap the mic and try again — speak a bit louder or closer.");
+            }
+        };
+        _gvRec.onerror = (e) => {
+            clearTimeout(_gvTimeout);
+            _gvErrorHandled = true;
+            const code = (e && e.error) || '';
+            let title = "Mic didn't work";
+            let detail = 'Tap the mic and try again.';
+            if (code === 'not-allowed' || code === 'service-not-allowed') {
+                title = 'Microphone blocked';
+                detail = 'Allow mic access in your browser settings, then try again.';
+            } else if (code === 'no-speech') {
+                title = "Didn't hear anything";
+                detail = 'Tap the mic and speak a bit louder.';
+            } else if (code === 'audio-capture') {
+                title = 'No microphone found';
+                detail = 'Check that your device has a working mic.';
+            } else if (code === 'network') {
+                title = 'Network error';
+                detail = "Speech needs a connection — check your internet and retry.";
+            }
+            gvCleanup();
+            gvToast(title, detail);
+        };
+        try {
+            _gvRec.start();
+        } catch (err) {
+            gvCleanup();
+            gvToast("Couldn't start mic", 'Tap the mic again in a moment.');
+        }
     }
 
     function gvStop() {
