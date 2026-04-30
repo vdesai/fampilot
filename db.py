@@ -950,8 +950,11 @@ def delete_meal_plan(plan_id: str) -> None:
 
 
 # ── Usage tracking (freemium) ──
+#
+# Default is effectively unlimited during validation. Set FREE_SCAN_LIMIT
+# env var on the host to a smaller number when monetization is live.
 
-FREE_SCAN_LIMIT = 5
+FREE_SCAN_LIMIT = int(os.getenv("FREE_SCAN_LIMIT", "999"))
 
 def get_scan_count(family_id: str) -> int:
     month_start = _local_today().replace(day=1).isoformat()
