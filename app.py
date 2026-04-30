@@ -640,7 +640,7 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
 
     family_id = auth["family_id"]
 
-    if not db.can_scan(family_id):
+    if auth.get("role") != "admin" and not db.can_scan(family_id):
         return templates.TemplateResponse(request, "result.html", {
             "request": request,
             "error": "You've used all 5 free AI scans this month. Upgrade to FamPilot Pro for unlimited scans.",
@@ -712,7 +712,7 @@ async def process_text(request: Request, text: str = Form(...)):
 
     family_id = auth["family_id"]
 
-    if not db.can_scan(family_id):
+    if auth.get("role") != "admin" and not db.can_scan(family_id):
         return templates.TemplateResponse(request, "result.html", {
             "request": request,
             "error": "You've used all 5 free AI scans this month. Upgrade to FamPilot Pro for unlimited scans.",
